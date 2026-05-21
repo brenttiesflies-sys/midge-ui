@@ -8,6 +8,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
+<!-- Mapbox GL JS — loaded eagerly so renderMap() can fire synchronously
+     when an artifact arrives. Cheap if the page never renders a map. -->
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.js"></script>
 <style>
   /* ───────── Brand tokens (halo gradient stops) ───────── */
   :root {
@@ -62,23 +66,17 @@
     background: var(--bg);
     color: var(--text);
     overflow: hidden;
-    /* Ensure full height even inside WP or iframe contexts */
-    min-height: 100%;
-    min-height: -webkit-fill-available;
   }
 
   .wrap {
+    height: 100dvh;       /* dynamic vh — handles mobile keyboard */
     height: 100vh;
-    height: 100dvh;       /* dynamic vh — handles mobile keyboard/browser chrome */
-    height: -webkit-fill-available;
     display: flex;
     flex-direction: column;
     position: relative;
     max-width: 820px;
     margin: 0 auto;
     padding: 0;
-    /* Belt-and-suspenders: ensure footer never scrolls off */
-    overflow: hidden;
   }
 
   /* ───────── Header bar ───────── */
@@ -327,8 +325,6 @@
     padding: 12px 14px;
     padding-bottom: max(12px, env(safe-area-inset-bottom));
     flex-shrink: 0;
-    position: relative;
-    z-index: 5;
   }
   form#composer {
     display: flex;
@@ -514,12 +510,163 @@
   }
   .reset-row button:hover { border-color: var(--accent); color: var(--accent); }
 
+  /* ───────── Training modal ───────── */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s;
+    padding: 20px;
+  }
+  .modal-backdrop.open { opacity: 1; pointer-events: auto; }
+  .modal {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px 22px 18px;
+    max-width: 360px;
+    width: 100%;
+    position: relative;
+    color: var(--text);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .modal h3 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 18px;
+    margin-bottom: 8px;
+    padding-right: 30px;
+  }
+  .modal p {
+    color: var(--text-soft);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .modal .x {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--text-soft);
+    font-size: 22px;
+    font-weight: 300;
+    cursor: pointer;
+    border-radius: 8px;
+    line-height: 1;
+  }
+  .modal .x:hover { background: var(--bg-soft); color: var(--text); }
+
+  /* ── Inline artifacts: conditions card + Mapbox map ──────────── */
+  .artifact {
+    margin: 12px 0;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg-soft);
+    overflow: hidden;
+  }
+  .artifact-header {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .artifact-loc { font-weight: 600; font-size: 14px; }
+  .artifact-asof { font-size: 11px; color: var(--text-soft); }
+
+  /* Conditions card */
+  .cond-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+    padding: 12px 14px;
+  }
+  .cond-cell {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .cond-cell .label {
+    font-size: 11px;
+    color: var(--text-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+  }
+  .cond-cell .value {
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.1;
+  }
+  .cond-cell .sub {
+    font-size: 11px;
+    color: var(--text-soft);
+    margin-top: 3px;
+  }
+  .cond-trend-up::after   { content: " ↑"; color: #2dba4e; }
+  .cond-trend-down::after { content: " ↓"; color: #d63838; }
+  .cond-trend-steady::after { content: " →"; color: var(--text-soft); }
+  .cond-missing {
+    padding: 8px 14px 12px;
+    font-size: 11px;
+    color: var(--text-soft);
+    font-style: italic;
+  }
+
+  /* Map */
+  .map-wrap { padding: 0; }
+  .midge-map {
+    width: 100%;
+    height: 260px;
+    background: #1a1f1d;
+  }
+  .map-overlays {
+    padding: 8px 14px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    border-top: 1px solid var(--border);
+  }
+  .map-overlay-toggle {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 11px;
+    cursor: pointer;
+    line-height: 1.2;
+  }
+  .map-overlay-toggle.on {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .map-error {
+    padding: 14px;
+    font-size: 12px;
+    color: var(--text-soft);
+  }
 
   /* Mobile narrowing */
   @media (max-width: 540px) {
     .welcome h1 { font-size: 22px; }
     .chip { font-size: 12px; padding: 7px 12px; }
     .drawer { top: 56px; }
+    .midge-map { height: 220px; }
+    .cond-grid { grid-template-columns: 1fr 1fr; }
   }
 </style>
 </head>
@@ -528,11 +675,11 @@
 <div class="wrap">
 
   <header>
-    <a class="back-vault" id="backVault" href="https://flyvault.net/">
+    <a class="back-vault" id="backVault" href="https://flyvault.net/" data-train="back-vault">
       <span class="vault-door" aria-hidden="true"></span>
       <span>Back to the Vault</span>
     </a>
-    <button class="menu-btn" id="menuBtn" aria-label="Open menu">
+    <button class="menu-btn" id="menuBtn" aria-label="Open menu" data-train="menu">
       <span></span><span></span><span></span>
     </button>
   </header>
@@ -659,6 +806,14 @@
   </div>
 </aside>
 
+<!-- Training modal -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <button class="x" id="modalX" aria-label="Close">×</button>
+    <h3 id="modalTitle">…</h3>
+    <p id="modalBody">…</p>
+  </div>
+</div>
 
 <script>
 /* ────────────────────────────────────────────────────────────
@@ -683,7 +838,53 @@ const SESSION_ID = (() => {
   } catch { return makeSessionId(); }
 })();
 
-// Training modals removed — no popups.
+// ── Training-wheels modal map ───────────────────────────────
+// Update copy here. Set window.MIDGE_TRAINING=false to disable globally.
+window.MIDGE_TRAINING = true;
+const TRAINING = {
+  "menu":         { title: "My Midge menu",        body: "Open this to change how MIDGE looks. Logo, colors, halo, and which side things sit on." },
+  "back-vault":   { title: "Back to the Vault",    body: "Tap to leave MIDGE and return to FlyVault." },
+  "my-logo":      { title: "My Logo",              body: "Pick one of three logos. Silver, white, or black." },
+  "my-bg":        { title: "My Background",        body: "Change the color of the page behind everything." },
+  "my-words":     { title: "My Words / Text",      body: "Change the color of the writing on the page." },
+  "behind-logo":  { title: "Behind My Logo",       body: "Change the circle that sits behind your logo." },
+  "my-halo":      { title: "My Halo",              body: "Turn the ring of light around your logo on or off." },
+  "theme":        { title: "Light or Dark",        body: "Pick a starting look. Light is warm and bright. Dark is calm and quiet. You can change any color from there." },
+  "my-hand":      { title: "My Hand",              body: "Pick which side of the screen your menu sits on. R for right-handed (default). L for left-handed — your menu moves to the left, the Vault button moves to the right." },
+  "reset":        { title: "Reset",                body: "Put everything back to default." }
+};
+const seenTrainingKey = "midge_training_seen";
+function getSeen() { try { return JSON.parse(localStorage.getItem(seenTrainingKey) || "{}"); } catch { return {}; } }
+function markSeen(k) { const s = getSeen(); s[k]=1; try{ localStorage.setItem(seenTrainingKey, JSON.stringify(s)); }catch{} }
+
+const modalBackdrop = document.getElementById("modalBackdrop");
+const modalTitle = document.getElementById("modalTitle");
+const modalBody = document.getElementById("modalBody");
+function showTraining(key) {
+  const t = TRAINING[key];
+  if (!t) return false;
+  modalTitle.textContent = t.title;
+  modalBody.textContent  = t.body;
+  modalBackdrop.classList.add("open");
+  return true;
+}
+function closeModal() { modalBackdrop.classList.remove("open"); }
+document.getElementById("modalX").addEventListener("click", closeModal);
+modalBackdrop.addEventListener("click", e => { if (e.target === modalBackdrop) closeModal(); });
+
+// Intercept first-tap on any [data-train] element
+document.addEventListener("click", e => {
+  if (!window.MIDGE_TRAINING) return;
+  const el = e.target.closest("[data-train]");
+  if (!el) return;
+  const key = el.dataset.train;
+  const seen = getSeen();
+  if (!seen[key]) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (showTraining(key)) markSeen(key);
+  }
+}, true);  // capture phase so we intercept before the actual handler
 
 // ── Preferences (persisted) ─────────────────────────────────
 const PREFS_KEY = "midge_prefs_v1";
@@ -747,6 +948,7 @@ const menuBtn = document.getElementById("menuBtn");
 function openDrawer() { drawer.classList.add("open"); }
 function closeDrawer() { drawer.classList.remove("open"); }
 menuBtn.addEventListener("click", e => {
+  // training-wheels for the menu fires first via capture phase; if it fired, training will preventDefault.
   if (drawer.classList.contains("open")) closeDrawer(); else openDrawer();
 });
 document.addEventListener("click", e => {
@@ -831,6 +1033,231 @@ function render(text) {
   t = t.replace(/\n\n/g, "</p><p>").replace(/\n/g, "<br>");
   return "<p>" + t + "</p>";
 }
+
+/* ─────── Inline artifact renderers ─────────────────────────────
+   Backend's /ask response now includes an `artifacts` array. Each
+   entry is {type, data}. Map artifacts produce a live Mapbox view;
+   conditions artifacts produce a weather-app-style card. Both render
+   below the model's narration text in the same chat bubble.
+*/
+
+// Used to suffix DOM ids so multiple maps in the same chat don't collide.
+let _artifactCounter = 0;
+
+function renderConditionsCard(bundle) {
+  // bundle is the full get_hatch_conditions result: {location, raw, factors,
+  // sources, missing, ...}. We pull the raw values for honest display —
+  // the model narrates from them in its prose, and the user sees the same
+  // numbers here. No fabricated data possible.
+  const loc = bundle.location || {};
+  const raw = bundle.raw || {};
+  const w = raw.weather || {};
+  const water = raw.water || {};
+  const air = raw.air_quality || {};
+  const astro = raw.astronomy || {};
+  const missing = bundle.missing || [];
+
+  const cells = [];
+  const addCell = (label, value, sub, trendClass) => {
+    if (value === null || value === undefined || value === "") return;
+    const cls = trendClass ? ` ${trendClass}` : "";
+    cells.push(
+      `<div class="cond-cell"><div class="label">${escapeHtml(label)}</div>` +
+      `<div class="value${cls}">${escapeHtml(String(value))}</div>` +
+      (sub ? `<div class="sub">${escapeHtml(sub)}</div>` : "") +
+      `</div>`
+    );
+  };
+
+  // Water column
+  if (water.water_temp_f != null) addCell("Water temp", water.water_temp_f.toFixed(1) + "°F");
+  if (water.flow_cfs != null) addCell("Flow", Math.round(water.flow_cfs) + " CFS",
+                                       water.gauge_height_ft != null ? water.gauge_height_ft.toFixed(2) + " ft gauge" : null);
+
+  // Air column
+  if (w.air_temp_f != null) {
+    const sub = (w.air_temp_rate_f_per_hr != null)
+      ? `${w.air_temp_rate_f_per_hr >= 0 ? "+" : ""}${w.air_temp_rate_f_per_hr.toFixed(1)}°/hr`
+      : null;
+    addCell("Air temp", w.air_temp_f.toFixed(0) + "°F", sub);
+  }
+  if (w.humidity_pct != null) addCell("Humidity", Math.round(w.humidity_pct) + "%");
+  if (w.wind_mph != null) addCell("Wind", w.wind_mph.toFixed(1) + " mph");
+  if (w.uv_index != null) addCell("UV index", w.uv_index.toFixed(1));
+
+  // Pressure with trend arrow
+  if (w.baro_trend_3day_inHg != null) {
+    const sign = w.baro_trend_3day_inHg >= 0 ? "+" : "";
+    const trendClass = w.baro_trend_label === "rising" ? "cond-trend-up"
+                     : w.baro_trend_label === "falling" ? "cond-trend-down"
+                     : "cond-trend-steady";
+    addCell("Pressure (3-day)", sign + w.baro_trend_3day_inHg.toFixed(2) + " inHg",
+            w.baro_trend_label || null, trendClass);
+  }
+  if (w.precip_history_in_7day != null) {
+    addCell("Precip (7-day)", w.precip_history_in_7day.toFixed(2) + " in");
+  }
+
+  // Air quality
+  if (air.aqi != null) addCell("AQI", air.aqi, air.category || null);
+
+  // Astronomy
+  if (astro.sunrise_local) addCell("Sunrise", astro.sunrise_local,
+                                    astro.sunset_local ? "set " + astro.sunset_local : null);
+  if (astro.photoperiod_hours != null) addCell("Daylight", astro.photoperiod_hours.toFixed(1) + " hr");
+  if (astro.moon_brightness_pct != null) addCell("Moon", Math.round(astro.moon_brightness_pct) + "%");
+
+  const locLine = [loc.label, loc.state].filter(s => s && !(loc.label || "").includes(s)).join(", ");
+  const asOf = bundle.as_of ? new Date(bundle.as_of).toLocaleString() : "";
+  const missingNote = missing.length
+    ? `<div class="cond-missing">Some sources didn't answer: ${escapeHtml(missing.join(", "))}.</div>`
+    : "";
+
+  return (
+    `<div class="artifact">` +
+      `<div class="artifact-header">` +
+        `<div class="artifact-loc">${escapeHtml(loc.label || "Conditions")}` +
+        (loc.state && !(loc.label || "").includes(loc.state) ? `, ${escapeHtml(loc.state)}` : "") +
+        `</div>` +
+        (asOf ? `<div class="artifact-asof">${escapeHtml(asOf)}</div>` : "") +
+      `</div>` +
+      `<div class="cond-grid">${cells.join("")}</div>` +
+      missingNote +
+    `</div>`
+  );
+}
+
+function renderMapArtifact(payload) {
+  // payload = {config, scoped_token, expires_in_s}. Returns a host div
+  // immediately; the actual Mapbox map mounts asynchronously once we have
+  // the token. If anything fails we fall back to a static text summary.
+  const id = `midge-map-${++_artifactCounter}`;
+  const config = payload.config || {};
+  const loc = config.location || {};
+  const center = config.center || {};
+  const annotations = config.annotations || [];
+  const overlays = config.overlays || [];
+  const conditions = config.conditions;
+
+  // Pre-attach conditions card from the bundle (saves a tool call).
+  const condHtml = conditions ? renderConditionsCard(conditions) : "";
+
+  const header =
+    `<div class="artifact-header">` +
+      `<div class="artifact-loc">${escapeHtml(loc.label || "Map")}` +
+      (loc.state && !(loc.label || "").includes(loc.state) ? `, ${escapeHtml(loc.state)}` : "") +
+      `</div>` +
+      (annotations[1] ? `<div class="artifact-asof">${escapeHtml(annotations[1])}</div>` : "") +
+    `</div>`;
+
+  const overlayBar = overlays.length
+    ? `<div class="map-overlays">` +
+        overlays.map((o, i) =>
+          `<button class="map-overlay-toggle${o.default_enabled ? " on" : ""}" ` +
+          `data-overlay-id="${escapeHtml(o.id)}" data-map-id="${id}" type="button">` +
+          escapeHtml(o.name || o.id) +
+          `</button>`
+        ).join("") +
+      `</div>`
+    : "";
+
+  // Mount the map asynchronously — has to wait for the token fetch.
+  setTimeout(() => mountMapboxMap(id, payload), 0);
+
+  return (
+    `<div class="artifact">` +
+      header +
+      `<div class="map-wrap"><div id="${id}" class="midge-map"></div></div>` +
+      overlayBar +
+    `</div>` +
+    condHtml
+  );
+}
+
+async function mountMapboxMap(domId, payload) {
+  const el = document.getElementById(domId);
+  if (!el) return;
+
+  if (typeof mapboxgl === "undefined") {
+    el.outerHTML = `<div class="map-error">Mapbox couldn't load. Check your network and try again.</div>`;
+    return;
+  }
+
+  // Token: prefer the scoped one minted by the subagent. If absent (no
+  // MAPBOX_SECRET_TOKEN on Railway yet), try fetching from the backend's
+  // /mapbox-token endpoint. If that also fails, show a graceful error.
+  let token = payload.scoped_token;
+  if (!token) {
+    try {
+      const tokenUrl = API.replace(/\/ask$/, "/mapbox-token");
+      const r = await fetch(tokenUrl);
+      if (r.ok) {
+        const j = await r.json();
+        token = j.token;
+      }
+    } catch (_) {
+      // fall through to error below
+    }
+  }
+  if (!token) {
+    el.outerHTML = `<div class="map-error">Map unavailable — MAPBOX_SECRET_TOKEN isn't configured on the server yet.</div>`;
+    return;
+  }
+
+  mapboxgl.accessToken = token;
+  const config = payload.config || {};
+  const center = config.center || {};
+  const map = new mapboxgl.Map({
+    container: domId,
+    style: config.style_url || "mapbox://styles/mapbox/outdoors-v12",
+    center: [center.lon || 0, center.lat || 0],
+    zoom: config.zoom || 11,
+  });
+  map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
+
+  // Markers
+  const markers = config.markers || [];
+  markers.forEach(m => {
+    if (typeof m.lat !== "number" || typeof m.lon !== "number") return;
+    const popupHtml = m.popup
+      ? `<div style="font-size:12px;line-height:1.5">` +
+        `<strong>${escapeHtml(m.label || "")}</strong><br>` +
+        escapeHtml(m.popup).replace(/\n/g, "<br>") +
+        `</div>`
+      : `<div style="font-size:12px"><strong>${escapeHtml(m.label || "")}</strong></div>`;
+    new mapboxgl.Marker({ color: "#e24b4a" })
+      .setLngLat([m.lon, m.lat])
+      .setPopup(new mapboxgl.Popup({ offset: 18 }).setHTML(popupHtml))
+      .addTo(map);
+  });
+
+  // Fit to bbox if available
+  const bbox = config.bbox;
+  if (bbox && typeof bbox.west === "number") {
+    map.fitBounds(
+      [[bbox.west, bbox.south], [bbox.east, bbox.north]],
+      { padding: 36, duration: 0, maxZoom: 14 }
+    );
+  }
+
+  // Wire overlay toggle buttons. v1: visual-only — flipping a toggle
+  // marks it active. Actual layer rendering wires in here later when the
+  // overlay tile sources are decided. The frontend contract is locked in
+  // now so the rebuild can extend without changing the API.
+  document.querySelectorAll(`.map-overlay-toggle[data-map-id="${domId}"]`).forEach(btn => {
+    btn.addEventListener("click", () => {
+      btn.classList.toggle("on");
+      // TODO(rebuild): toggle map.setLayoutProperty(...) for each overlay
+    });
+  });
+}
+
+function renderArtifact(art) {
+  if (!art || !art.type) return "";
+  if (art.type === "map") return renderMapArtifact(art.data || {});
+  if (art.type === "conditions") return renderConditionsCard(art.data || {});
+  return "";
+}
 function addMsg(role, html, pending) {
   const div = document.createElement("div");
   div.className = "msg " + role + (pending ? " pending" : "");
@@ -858,17 +1285,21 @@ async function ask(question) {
     if (!resp.ok) throw new Error("HTTP " + resp.status);
     const data = await resp.json();
     const answer = data.answer || "(no answer returned)";
-    // Don't poison history with transient overload/error messages
-    const FALLBACK_MSG = "Midge is a little overloaded right now";
-    const isError = answer.startsWith(FALLBACK_MSG) || answer === "(no answer returned)";
     pending.classList.remove("pending");
-    if (isError) {
-      pending.innerHTML = `<span class="err">${render(answer)} Try again in a moment.</span>`;
-    } else {
-      pending.innerHTML = render(answer);
-      history.push({ role: "user", content: question });
-      history.push({ role: "assistant", content: answer });
+
+    // Compose the bubble: model's narration first, then any visual
+    // artifacts (map or conditions card) the tool-calling loop produced.
+    // The text leads — the visuals support it, never replace it.
+    let html = render(answer);
+    const artifacts = Array.isArray(data.artifacts) ? data.artifacts : [];
+    for (const art of artifacts) {
+      const block = renderArtifact(art);
+      if (block) html += block;
     }
+    pending.innerHTML = html;
+
+    history.push({ role: "user", content: question });
+    history.push({ role: "assistant", content: answer });
   } catch (e) {
     pending.classList.remove("pending");
     pending.innerHTML = `<span class="err">MIDGE is unreachable right now — try again in a moment. (${e.message})</span>`;
