@@ -668,6 +668,408 @@
     .midge-map { height: 220px; }
     .cond-grid { grid-template-columns: 1fr 1fr; }
   }
+
+  /* ───────────────────────────────────────────────────────────────
+     v6 Cards (Phase B)
+     Hero-left + brookie-flank-right with gradient blend. FlyVault
+     logo in the bottom-right of the art. On expand, art slides up
+     to a thin header band, hero scales to full width, expanded
+     panel reveals below. Each card has a 3px colored top stripe.
+     All selectors are namespaced under .mv2-* so they don't clash
+     with the existing .cond-cell / .artifact / .midge-map styles.
+     The v6 design is HARDCODED (dark colors only) — it doesn't
+     bind to --bg / --text vars. This is intentional: the locked
+     design IS the dark-mode look.
+     ─────────────────────────────────────────────────────────── */
+
+  .mv2-stack { display: flex; flex-direction: column; gap: 12px;
+               margin-top: 10px; }
+
+  .mv2-card {
+    background: #1a212e;
+    border: 1px solid #2a3447;
+    border-radius: 16px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 160ms, box-shadow 160ms;
+    user-select: none;
+    min-height: 168px;
+  }
+  .mv2-card:hover { border-color: #3a4863; }
+
+  /* 3px colored top stripe per card type */
+  .mv2-card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0;
+    height: 3px; z-index: 5;
+  }
+  .mv2-card.water::before   { background: linear-gradient(90deg, #60a5fa, #3b82f6); }
+  .mv2-card.weather::before { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
+  .mv2-card.astro::before   { background: linear-gradient(90deg, #a78bfa, #8b5cf6); }
+  .mv2-card.radar::before   { background: linear-gradient(90deg, #10b981, #059669); }
+
+  /* Brookie flank art region — right two-thirds when collapsed,
+     full-width header band when expanded. */
+  .mv2-art {
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 62%;
+    overflow: hidden;
+    pointer-events: none;
+    transition: width 480ms cubic-bezier(0.22, 1, 0.36, 1),
+                height 480ms cubic-bezier(0.22, 1, 0.36, 1),
+                top 480ms cubic-bezier(0.22, 1, 0.36, 1),
+                bottom 480ms cubic-bezier(0.22, 1, 0.36, 1);
+    z-index: 1;
+    opacity: 0.92;
+  }
+  .mv2-card.open .mv2-art {
+    top: 0; right: 0; bottom: auto;
+    width: 100%; height: 88px;
+  }
+  .mv2-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  /* Gradient blend overlay — softened multi-stop so the art→card-body
+     transition reads as continuous, not banded. */
+  .mv2-art::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(to right,
+      #1a212e 0%,
+      rgba(26, 33, 46, 0.98) 8%,
+      rgba(26, 33, 46, 0.88) 18%,
+      rgba(26, 33, 46, 0.70) 30%,
+      rgba(26, 33, 46, 0.45) 45%,
+      rgba(26, 33, 46, 0.22) 62%,
+      rgba(26, 33, 46, 0.08) 80%,
+      transparent 100%);
+    transition: background 480ms cubic-bezier(0.22, 1, 0.36, 1);
+    z-index: 2;
+  }
+  /* Vignette so the art doesn't hard-crop at the card border */
+  .mv2-art::after {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(to bottom, rgba(26,33,46,0.35) 0%, transparent 12%, transparent 88%, rgba(26,33,46,0.35) 100%),
+      linear-gradient(to left,   rgba(26,33,46,0.25) 0%, transparent 8%);
+    pointer-events: none;
+    z-index: 2;
+    transition: background 480ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .mv2-card.open .mv2-art::before {
+    background: linear-gradient(to bottom,
+      transparent 0%, transparent 35%,
+      rgba(26, 33, 46, 0.30) 60%,
+      rgba(26, 33, 46, 0.75) 85%,
+      #1a212e 100%);
+  }
+  .mv2-card.open .mv2-art::after {
+    background: linear-gradient(to right,
+      rgba(26,33,46,0.20) 0%, transparent 6%, transparent 94%, rgba(26,33,46,0.20) 100%);
+  }
+
+  /* FlyVault logo — bottom-right of art collapsed, top-right band expanded.
+     Solid black silhouette via brightness(0) filter so any logo PNG works. */
+  .mv2-fv-wrap {
+    position: absolute;
+    bottom: -8px; right: -14px;
+    width: 84px; height: 84px;
+    z-index: 4;
+    pointer-events: none;
+    display: flex; align-items: center; justify-content: center;
+    transition: bottom 480ms cubic-bezier(0.22, 1, 0.36, 1),
+                top 480ms cubic-bezier(0.22, 1, 0.36, 1),
+                right 480ms cubic-bezier(0.22, 1, 0.36, 1),
+                width 480ms cubic-bezier(0.22, 1, 0.36, 1),
+                height 480ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .mv2-fv {
+    width: 76px; height: 76px;
+    filter: brightness(0) saturate(100%) contrast(1000%)
+            drop-shadow(0 1px 0 #000)
+            drop-shadow(0 2px 2px rgba(0,0,0,0.5));
+    transition: width 480ms cubic-bezier(0.22, 1, 0.36, 1),
+                height 480ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .mv2-card.open .mv2-fv-wrap {
+    bottom: auto; top: -4px; right: -8px;
+    width: 68px; height: 68px;
+  }
+  .mv2-card.open .mv2-fv { width: 60px; height: 60px; }
+
+  /* Content layer */
+  .mv2-body {
+    position: relative; z-index: 3;
+    padding: 18px;
+    transition: padding 480ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .mv2-card.open .mv2-body { padding-top: 100px; }
+
+  .mv2-head { display: flex; justify-content: space-between; align-items: center;
+              margin-bottom: 12px; max-width: 40%; }
+  .mv2-card.open .mv2-head { max-width: 100%; margin-bottom: 14px; }
+  .mv2-icon { display: flex; align-items: center; gap: 8px;
+              font-size: 13px; font-weight: 600; color: #cbd5e1; }
+  .mv2-icon .em { font-size: 16px; }
+  .mv2-icon .chev { color: #64748b; font-size: 11px; margin-left: 8px;
+                    transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1); display: inline-block; }
+  .mv2-card.open .mv2-icon .chev { transform: rotate(180deg); }
+
+  .mv2-tag { font-size: 10px; padding: 3px 8px; border-radius: 99px; font-weight: 600;
+             text-transform: uppercase; letter-spacing: 0.05em; flex-shrink: 0; }
+  .mv2-tag.live { background: rgba(74,222,128,0.18); color: #4ade80; }
+  .mv2-tag.dark { background: rgba(148,163,184,0.18); color: #94a3b8; }
+  .mv2-tag.soon { background: rgba(168,85,247,0.18); color: #c084fc; }
+
+  /* Hero — left-anchored when collapsed, full when expanded */
+  .mv2-hero-wrap { overflow: hidden; max-width: 50%;
+                   transition: max-width 480ms cubic-bezier(0.22, 1, 0.36, 1); }
+  .mv2-card.open .mv2-hero-wrap { max-width: 100%; }
+  .mv2-hero-track { display: flex; transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1); }
+  .mv2-hero-slide { flex: 0 0 100%; padding: 4px 0 0; text-align: left; }
+  .mv2-hero-slide .lbl { color: #64748b; font-size: 11px; text-transform: uppercase;
+                         letter-spacing: 0.06em; margin-bottom: 8px; }
+  .mv2-hero-slide .num { font-size: 52px; font-weight: 800; letter-spacing: -0.03em; line-height: 1;
+                         background: linear-gradient(180deg, #fff, #cbd5e1);
+                         -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                         display: inline-block;
+                         filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
+  .mv2-hero-slide .unit { color: #cbd5e1; font-size: 16px; margin-left: 4px; font-weight: 500; }
+  .mv2-hero-slide.empty .num { background: none; -webkit-text-fill-color: #64748b;
+                               font-size: 20px; font-weight: 500; font-style: italic; }
+
+  /* Astro combo (slide 1) */
+  .mv2-astro-combo { padding: 4px 0 0; text-align: left; }
+  .mv2-astro-combo .countdown-lbl { color: #64748b; font-size: 11px;
+                                    text-transform: uppercase; letter-spacing: 0.06em;
+                                    margin-bottom: 8px; }
+  .mv2-astro-combo .countdown { font-size: 48px; font-weight: 800; letter-spacing: -0.03em;
+                                line-height: 1;
+                                background: linear-gradient(180deg, #fff, #cbd5e1);
+                                -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                                display: inline-block;
+                                filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
+  .mv2-astro-combo .endpoint { display: flex; align-items: center; gap: 8px; margin-top: 10px;
+                               color: #fbbf24; }
+  .mv2-astro-combo .endpoint .e-icon { font-size: 14px; }
+  .mv2-astro-combo .endpoint .e-lbl { font-size: 10px; text-transform: uppercase;
+                                      letter-spacing: 0.06em; }
+  .mv2-astro-combo .endpoint .e-val { font-size: 16px; font-weight: 700; margin-left: 2px;
+                                      font-variant-numeric: tabular-nums; }
+
+  /* Swipe nav (arrows + dots) */
+  .mv2-swipe-nav { display: flex; align-items: center; gap: 12px;
+                   margin-top: 14px; max-width: 50%;
+                   transition: max-width 480ms cubic-bezier(0.22, 1, 0.36, 1); }
+  .mv2-card.open .mv2-swipe-nav { max-width: 100%; padding-top: 12px;
+                                  border-top: 1px solid rgba(255,255,255,0.06); }
+  .mv2-swipe-arrow { background: rgba(255,255,255,0.08); border: 0; color: #cbd5e1;
+                     width: 26px; height: 26px; border-radius: 7px; cursor: pointer;
+                     font-size: 13px; display: flex; align-items: center; justify-content: center;
+                     transition: background 120ms; flex-shrink: 0; }
+  .mv2-swipe-arrow:hover { background: rgba(255,255,255,0.18); }
+  .mv2-swipe-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+  .mv2-swipe-dots { display: flex; gap: 6px; }
+  .mv2-swipe-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.2);
+                   transition: all 200ms; }
+  .mv2-swipe-dot.on { background: #60a5fa; width: 18px; border-radius: 99px; }
+
+  /* Expanded panel — grid-template-rows 0fr → 1fr trick.
+     min-height: 0 on the inner wrapper is REQUIRED or the animation
+     silently fails on tall content (weather card with hourly + 7-day). */
+  .mv2-panel { display: grid; grid-template-rows: 0fr; opacity: 0;
+               transition: grid-template-rows 450ms cubic-bezier(0.16, 1, 0.3, 1),
+                           opacity 320ms ease-out; }
+  .mv2-panel > .mv2-panel-inner { overflow: hidden; min-height: 0; }
+  .mv2-card.open .mv2-panel { grid-template-rows: 1fr; opacity: 1; }
+  .mv2-panel-grid { display: flex; flex-direction: column; gap: 4px;
+                    padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06); }
+  .mv2-panel-row { display: flex; justify-content: space-between; align-items: baseline;
+                   padding: 10px 8px; margin: 0 -8px; border-radius: 8px;
+                   cursor: pointer; transition: background 120ms; }
+  .mv2-panel-row:hover { background: rgba(255,255,255,0.04); }
+  .mv2-panel-row .lbl { color: #cbd5e1; font-size: 14px; }
+  .mv2-panel-row .val { font-size: 22px; font-weight: 700; }
+  .mv2-panel-row .val .u { font-size: 13px; color: #94a3b8; margin-left: 4px; font-weight: 500; }
+  .mv2-panel-row.empty .val { color: #64748b; font-size: 13px; font-weight: 400; font-style: italic; }
+
+  /* Context line under hero (e.g. "Alaska gauge dormant…") */
+  .mv2-ctx { background: rgba(251,146,60,0.08); border: 1px solid rgba(251,146,60,0.25);
+             border-radius: 10px; padding: 10px 12px; font-size: 12px;
+             color: #fed7aa; margin-top: 14px; display: flex; align-items: flex-start; gap: 8px;
+             max-width: 60%; }
+  .mv2-card.open .mv2-ctx { max-width: 100%; }
+  .mv2-ctx .em { font-size: 14px; flex-shrink: 0; }
+
+  /* Solunar rating badge + table */
+  .mv2-rating-badge { font-size: 10px; padding: 3px 8px; border-radius: 99px; font-weight: 700;
+                      text-transform: uppercase; letter-spacing: 0.05em; }
+  .mv2-rating-badge.excellent { background: rgba(74,222,128,0.22); color: #4ade80; }
+  .mv2-rating-badge.good      { background: rgba(96,165,250,0.22); color: #60a5fa; }
+  .mv2-rating-badge.average   { background: rgba(251,191,36,0.22); color: #fbbf24; }
+  .mv2-rating-badge.poor      { background: rgba(148,163,184,0.18); color: #94a3b8; }
+
+  .mv2-solunar-hero { padding: 4px 0 0; text-align: left; }
+  .mv2-solunar-hero .label { color: #64748b; font-size: 11px; text-transform: uppercase;
+                             letter-spacing: 0.06em; margin-bottom: 8px; }
+  .mv2-solunar-hero .countdown { font-size: 38px; font-weight: 800; letter-spacing: -0.02em;
+                                 line-height: 1.1;
+                                 background: linear-gradient(180deg, #fff, #cbd5e1);
+                                 -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                                 display: inline-block;
+                                 filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
+  .mv2-solunar-hero .rating { display: inline-block; margin-top: 12px; }
+
+  .mv2-panel-title { color: #64748b; font-size: 10px; text-transform: uppercase;
+                     letter-spacing: 0.08em; margin: 14px 0 -4px; padding-top: 12px;
+                     border-top: 1px solid rgba(255,255,255,0.04); }
+
+  .mv2-solunar-table { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+  .mv2-solunar-row { display: grid; grid-template-columns: 24px 70px 1fr 110px;
+                     gap: 10px; align-items: center; font-size: 13px;
+                     padding: 8px 10px; border-radius: 8px;
+                     background: rgba(255,255,255,0.03); }
+  .mv2-solunar-row.now { background: rgba(74,222,128,0.10);
+                         border: 1px solid rgba(74,222,128,0.3); }
+  .mv2-solunar-row .icon { text-align: center; font-size: 14px; }
+  .mv2-solunar-row .label-cell { color: #cbd5e1; font-weight: 600; }
+  .mv2-solunar-row .label-cell .sub { color: #64748b; font-weight: 400; font-size: 11px;
+                                      display: block; margin-top: 1px; }
+  .mv2-solunar-row .kind { color: #94a3b8; font-size: 11px; text-transform: uppercase;
+                           letter-spacing: 0.04em; }
+  .mv2-solunar-row .time { color: #e5e7eb; font-weight: 700;
+                           font-variant-numeric: tabular-nums; text-align: right; font-size: 13px; }
+  .mv2-solunar-row.major .label-cell { color: #fbbf24; }
+  .mv2-solunar-row.minor .label-cell { color: #93c5fd; }
+
+  /* Hourly + 7-day forecast strips (weather card expanded) */
+  .mv2-hourly { display: flex; gap: 12px; overflow-x: auto; margin-top: 14px;
+                padding: 12px 0 4px; scrollbar-width: thin; }
+  .mv2-hour { flex-shrink: 0; text-align: center; min-width: 48px; cursor: pointer;
+              padding: 4px; border-radius: 6px; transition: background 120ms; }
+  .mv2-hour:hover { background: rgba(255,255,255,0.04); }
+  .mv2-hour .t  { color: #64748b; font-size: 11px; }
+  .mv2-hour .em { font-size: 18px; margin: 4px 0; display: block; }
+  .mv2-hour .v  { font-size: 14px; font-weight: 600; }
+  .mv2-forecast { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+  .mv2-fday { display: grid; grid-template-columns: 44px 22px 50px 1fr 50px; gap: 10px;
+              align-items: center; font-size: 13px; padding: 4px 0; }
+  .mv2-fday .day { color: #cbd5e1; font-weight: 500; }
+  .mv2-fday .ic  { font-size: 16px; text-align: center; }
+  .mv2-fday .lo, .mv2-fday .hi { color: #94a3b8; text-align: center; font-variant-numeric: tabular-nums; }
+  .mv2-fday .hi { color: #e5e7eb; font-weight: 600; }
+  .mv2-fday .bar { height: 4px; background: rgba(255,255,255,0.08); border-radius: 99px;
+                   position: relative; overflow: hidden; }
+  .mv2-fday .bar::after { content: ""; position: absolute; height: 100%;
+                          background: linear-gradient(90deg, #60a5fa, #fbbf24, #ef4444);
+                          border-radius: 99px;
+                          left: var(--l, 20%); right: var(--r, 20%); }
+
+  /* Radar placeholder card */
+  .mv2-radar-empty { aspect-ratio: 16/9; background: repeating-linear-gradient(45deg,
+                       rgba(16,185,129,0.06) 0 10px, transparent 10px 20px);
+                     border: 1px dashed rgba(16,185,129,0.3); border-radius: 12px;
+                     display: flex; flex-direction: column; align-items: center; justify-content: center;
+                     color: #6ee7b7; font-size: 13px; gap: 6px; margin-top: 14px; }
+  .mv2-radar-empty .em { font-size: 28px; }
+
+  /* Drill-down sheet — opens when a row inside an expanded card is tapped.
+     Shows the current value front-and-center, plus a "history coming soon"
+     section. Real 24h history wires in once backend surfaces it. */
+  .mv2-scrim { position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+               opacity: 0; pointer-events: none; transition: opacity 240ms;
+               z-index: 5000;
+               backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+  .mv2-scrim.on { opacity: 1; pointer-events: auto; }
+  .mv2-drill-sheet { position: fixed; left: 50%; bottom: 0;
+                     transform: translate(-50%, 100%);
+                     max-width: 480px; width: calc(100% - 16px); margin: 0 8px;
+                     background: linear-gradient(180deg, #1e2735 0%, #161c28 100%);
+                     border: 1px solid #2a3447; border-bottom: 0;
+                     border-radius: 18px 18px 0 0; padding: 14px 18px 24px;
+                     max-height: 80vh; overflow-y: auto;
+                     transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+                     z-index: 5001; box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+                     color: #e5e7eb;
+                     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif; }
+  .mv2-drill-sheet.on { transform: translate(-50%, 0); }
+  .mv2-drill-sheet .grip { width: 36px; height: 4px; background: #475569;
+                           border-radius: 99px; margin: 0 auto 14px; }
+
+  /* Brookie banner across the top of the sheet — same art the user has
+     active on their card, gradient-blended into the sheet's dark
+     background so the data underneath reads cleanly. FlyVault logo
+     silhouette tucked into the corner mirrors the card treatment.
+     Routes through mv2GetCardArt() so when Phase H ships the skin
+     picker, this banner skins with the cards. */
+  .mv2-drill-art {
+    position: relative;
+    width: calc(100% + 36px); /* bleed to the rounded sheet edges */
+    margin: -14px -18px 14px;  /* pull up to kiss the top edge */
+    height: 96px;
+    overflow: hidden;
+    border-radius: 18px 18px 0 0;
+  }
+  .mv2-drill-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  /* Vertical gradient blend so the banner fades into the sheet body */
+  .mv2-drill-art::before {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(to bottom,
+      transparent 0%,
+      transparent 35%,
+      rgba(30, 39, 53, 0.30) 60%,
+      rgba(30, 39, 53, 0.80) 85%,
+      #1e2735 100%);
+  }
+  /* Side vignette so the banner doesn't crop hard at sheet edges */
+  .mv2-drill-art::after {
+    content: ""; position: absolute; inset: 0;
+    background:
+      linear-gradient(to right, rgba(30,39,53,0.20) 0%, transparent 6%, transparent 94%, rgba(30,39,53,0.20) 100%);
+  }
+  /* FlyVault logo silhouette — mirrors the card's expanded-state placement */
+  .mv2-drill-fv-wrap {
+    position: absolute; top: -4px; right: -8px;
+    width: 68px; height: 68px;
+    z-index: 2;
+    pointer-events: none;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .mv2-drill-fv {
+    width: 60px; height: 60px;
+    filter: brightness(0) saturate(100%) contrast(1000%)
+            drop-shadow(0 1px 0 #000)
+            drop-shadow(0 2px 2px rgba(0,0,0,0.5));
+  }
+  .mv2-drill-head { display: flex; justify-content: space-between;
+                    align-items: flex-start; margin-bottom: 16px; }
+  .mv2-drill-title { font-size: 13px; text-transform: uppercase;
+                     letter-spacing: 0.06em; color: #94a3b8; font-weight: 600; }
+  .mv2-drill-current { font-size: 42px; font-weight: 800; letter-spacing: -0.02em;
+                       margin-top: 6px;
+                       background: linear-gradient(180deg, #fff, #cbd5e1);
+                       -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .mv2-drill-current .u { font-size: 14px; color: #94a3b8; margin-left: 4px;
+                          -webkit-text-fill-color: #94a3b8; }
+  .mv2-drill-close { background: rgba(255,255,255,0.08); border: 0; color: #cbd5e1;
+                     width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+                     font-size: 16px; display: flex; align-items: center;
+                     justify-content: center; padding: 0; }
+  .mv2-drill-section { margin-top: 18px; }
+  .mv2-drill-section-title { color: #64748b; font-size: 10px; text-transform: uppercase;
+                             letter-spacing: 0.08em; margin-bottom: 10px; }
+  .mv2-drill-placeholder { background: rgba(255,255,255,0.02);
+                           border: 1px dashed rgba(255,255,255,0.10);
+                           border-radius: 10px; padding: 18px 14px;
+                           color: #64748b; font-size: 13px; text-align: center;
+                           line-height: 1.5; }
+  .mv2-drill-placeholder .em { font-size: 20px; display: block; margin-bottom: 6px; }
+  .mv2-drill-note { background: rgba(96,165,250,0.08);
+                    border: 1px solid rgba(96,165,250,0.25);
+                    border-radius: 10px; padding: 10px 12px; font-size: 12px;
+                    color: #93c5fd; margin-top: 14px;
+                    display: flex; align-items: flex-start; gap: 8px; }
 </style>
 </head>
 <body class="dark hand-right">
@@ -1044,7 +1446,664 @@ function render(text) {
 // Used to suffix DOM ids so multiple maps in the same chat don't collide.
 let _artifactCounter = 0;
 
+// ───────────────────────────────────────────────────────────────────
+// Phase B: v6 card renderer (card_schema_version === 2)
+//
+// Activated whenever bundle.card_schema_version === 2 (current backend).
+// Renders three independent cards (water/weather/astronomy) with hero
+// number anchored left, brookie flank art anchored right, FlyVault logo
+// tucked into the corner. Tap-to-expand. Swipe through hero slides
+// before expanding. Each card has a 3px colored top stripe matching
+// its data type.
+//
+// Architecture notes:
+//  • DOM-mutating, NOT re-rendering. Re-rendering the whole chat bubble
+//    would destroy the Mapbox map. So we use class toggles + inline
+//    transforms to switch hero slides / expand state.
+//  • Each card instance gets a unique data-card-id so the delegated
+//    click handler can target the right one.
+//  • The art lookup goes through mv2GetCardArt() — Phase H ready. v1
+//    always returns the brookie. Phase H reads from userPrefs.
+//  • The interaction wire-up runs once (mv2InitInteractions()) at first
+//    use. After that the delegated handler catches all future cards.
+// ───────────────────────────────────────────────────────────────────
+
+let _mv2CardCounter = 0;
+let _mv2InteractionsWired = false;
+
+/**
+ * Skin lookup. v1 returns the default brookie for every card. Phase H
+ * will key off userPrefs.active_skin_per_card[cardKey]; Phase I will
+ * key off userPrefs.user_photo_per_card; Phase J will cycle through an
+ * array. Keep this funnel narrow — DO NOT bake the path into the card
+ * markup directly.
+ */
+function mv2GetCardArt(cardKey, userPrefs) {
+  // Future: userPrefs?.active_skin_per_card?.[cardKey] || ...
+  return "assets/brookie-art-1.png";
+}
+
+/**
+ * Render one card (water / weather / astro). cardData is a card_v2
+ * card block: {status, fields, reason_if_missing, ...}. cardKey is
+ * "water" / "weather" / "astro".
+ */
+function mv2RenderCard(cardKey, cardData, ctx) {
+  if (!cardData) return "";
+  const id = `mv2-${++_mv2CardCounter}`;
+  const ICONS  = { water: "💧", weather: "🌤", astro: "🌅" };
+  const TITLES = { water: "Water", weather: "Weather", astro: "Astronomy" };
+
+  const fields = Array.isArray(cardData.fields) ? cardData.fields : [];
+  const reason = cardData.reason_if_missing || null;
+
+  // ─── Hero slides ───
+  let heroSlidesHtml = "";
+  let heroCount = 0;
+  let contextLine = "";
+
+  if (cardKey === "astro") {
+    // 3 hero slides: countdown+sun, moon phase, solunar countdown+rating.
+    const r = mv2BuildAstroHeroes(fields, cardData);
+    heroSlidesHtml = r.slides;
+    heroCount = r.count;
+  } else {
+    // Each field becomes a hero slide.
+    heroSlidesHtml = fields.map(f => mv2RenderHeroSlide(f)).join("");
+    heroCount = fields.length;
+  }
+
+  if (cardData.context || reason) {
+    const text = cardData.context || mv2ReasonContextText(reason, cardData);
+    if (text) {
+      contextLine = `<div class="mv2-ctx"><span class="em">ℹ️</span><span>${escapeHtml(text)}</span></div>`;
+    }
+  }
+
+  // ─── Status tag ───
+  let tagHtml;
+  if (cardData.status === "no_live_data" || cardData.status === "partial") {
+    const tagText = mv2TagForReason(reason);
+    tagHtml = `<span class="mv2-tag dark">${escapeHtml(tagText)}</span>`;
+  } else if (cardData.status === "ok") {
+    tagHtml = `<span class="mv2-tag live">live</span>`;
+  } else {
+    tagHtml = "";
+  }
+
+  // ─── Panel rows ───
+  const panelRows = fields.map(f => mv2RenderPanelRow(cardKey, f)).join("");
+
+  // ─── Expanded extras (weather hourly+forecast, astro solunar table) ───
+  let expandedExtras = "";
+  if (cardKey === "astro" && cardData.solunar_table) {
+    expandedExtras = mv2RenderSolunarTable(cardData.solunar_table, cardData.solunar_day_rating);
+  } else if (cardKey === "weather" && (ctx.hourly || ctx.forecast)) {
+    expandedExtras = mv2RenderWeatherExtras(ctx.hourly, ctx.forecast);
+  }
+
+  // ─── Swipe nav (only when there's >1 hero slide) ───
+  const dots = Array.from({ length: heroCount }, (_, i) =>
+    `<span class="mv2-swipe-dot${i === 0 ? " on" : ""}"></span>`
+  ).join("");
+  const swipeNav = heroCount > 1 ? `
+    <div class="mv2-swipe-nav">
+      <button class="mv2-swipe-arrow" data-mv2-swipe="prev" disabled>‹</button>
+      <div class="mv2-swipe-dots">${dots}</div>
+      <button class="mv2-swipe-arrow" data-mv2-swipe="next">›</button>
+    </div>` : "";
+
+  const artSrc = mv2GetCardArt(cardKey, ctx.userPrefs);
+
+  return `
+    <div class="mv2-card ${cardKey}" data-mv2-card="${id}" data-mv2-key="${cardKey}"
+         data-mv2-hero-idx="0" data-mv2-hero-count="${heroCount}">
+      <div class="mv2-art">
+        <img src="${escapeHtml(artSrc)}" alt=""
+             onerror="this.style.display='none'">
+      </div>
+      <div class="mv2-fv-wrap">
+        <img class="mv2-fv" src="assets/logo-black.png" alt="">
+      </div>
+      <div class="mv2-body">
+        <div class="mv2-head">
+          <div class="mv2-icon">
+            <span class="em">${ICONS[cardKey] || ""}</span> ${TITLES[cardKey] || cardKey}
+            <span class="chev">▾</span>
+          </div>
+          ${tagHtml}
+        </div>
+        <div class="mv2-hero-wrap">
+          <div class="mv2-hero-track" style="transform:translateX(0%)">
+            ${heroSlidesHtml}
+          </div>
+        </div>
+        ${swipeNav}
+        ${contextLine}
+        <div class="mv2-panel">
+          <div class="mv2-panel-inner">
+            <div class="mv2-panel-grid">${panelRows}</div>
+            ${expandedExtras}
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function mv2RenderHeroSlide(field) {
+  const v = field.value;
+  const empty = (v === null || v === undefined || v === "");
+  const unit = field.unit || "";
+  const valHtml = empty
+    ? `<span class="num">no live data</span>`
+    : `<span class="num">${escapeHtml(String(v))}</span>` +
+      (unit ? `<span class="unit">${escapeHtml(unit)}</span>` : "");
+  return `<div class="mv2-hero-slide${empty ? " empty" : ""}">
+            <div class="lbl">${escapeHtml(field.label || "")}</div>
+            <div>${valHtml}</div>
+          </div>`;
+}
+
+function mv2RenderPanelRow(cardKey, field) {
+  const v = field.value;
+  const empty = (v === null || v === undefined || v === "");
+  const unit = field.unit || "";
+  const valHtml = empty
+    ? `<span class="val" style="color:#64748b;font-size:13px;font-weight:400;font-style:italic">no live data</span>`
+    : `<span class="val">${escapeHtml(String(v))}` +
+      (unit ? `<span class="u">${escapeHtml(unit)}</span>` : "") +
+      `</span>`;
+  // data-mv2-drill carries everything the sheet needs to render. We pack
+  // value + unit + label into a single attribute (URI-encoded) so the
+  // click handler doesn't have to traverse the DOM to reassemble them.
+  const payload = JSON.stringify({
+    cardKey,
+    label: field.label || "",
+    value: empty ? null : String(v),
+    unit: unit,
+  });
+  return `<div class="mv2-panel-row${empty ? " empty" : ""}"
+               data-mv2-drill="${escapeHtml(encodeURIComponent(payload))}">
+            <span class="lbl">${escapeHtml(field.label || "")}</span>
+            ${valHtml}
+          </div>`;
+}
+
+/**
+ * Build the 3 astronomy hero slides:
+ *  1. Daylight countdown + approaching sun event (sunset OR sunrise)
+ *  2. Moon phase emoji + name
+ *  3. Solunar next-period countdown + day rating badge
+ * The first slide's countdown is computed client-side from sunrise/
+ * sunset times so it stays live without polling.
+ */
+function mv2BuildAstroHeroes(fields, cardData) {
+  const byLabel = {};
+  fields.forEach(f => { byLabel[(f.label || "").toLowerCase()] = f; });
+  const sunriseStr = byLabel["sunrise"]?.value;
+  const sunsetStr  = byLabel["sunset"]?.value;
+  const moonPhase  = byLabel["moon phase"]?.value;
+  const nextSolunar = byLabel["next solunar"]?.value;
+  const dayRating  = byLabel["day rating"]?.value || cardData.solunar_day_rating;
+
+  // ─── Slide 1: daylight countdown ───
+  const countdown = mv2ComputeDaylight(sunriseStr, sunsetStr);
+  let slide1;
+  if (countdown) {
+    slide1 = `
+      <div class="mv2-hero-slide">
+        <div class="mv2-astro-combo">
+          <div class="countdown-lbl">${escapeHtml(countdown.leadLabel)}</div>
+          <div class="countdown">${escapeHtml(countdown.leadValue)}</div>
+          <div class="endpoint">
+            <span class="e-icon">${countdown.sunUp ? "🌇" : "🌅"}</span>
+            <span class="e-lbl">${countdown.sunUp ? "Sunset" : "Sunrise"}</span>
+            <span class="e-val">${escapeHtml(countdown.endpointTime || "")}</span>
+          </div>
+        </div>
+      </div>`;
+  } else {
+    // Fall back to listing the sunrise field as a regular hero slide
+    slide1 = mv2RenderHeroSlide(byLabel["sunrise"] || {label:"Sunrise", value:null, unit:""});
+  }
+
+  // ─── Slide 2: moon phase ───
+  const slide2 = mv2RenderHeroSlide({
+    label: "Moon phase", value: moonPhase, unit: ""
+  });
+
+  // ─── Slide 3: solunar ───
+  let slide3 = "";
+  let count = 2;
+  if (nextSolunar) {
+    const rc = (dayRating || "").toLowerCase();
+    const badge = dayRating
+      ? `<div class="rating"><span class="mv2-rating-badge ${escapeHtml(rc)}">${escapeHtml(dayRating)} day</span></div>`
+      : "";
+    slide3 = `
+      <div class="mv2-hero-slide">
+        <div class="mv2-solunar-hero">
+          <div class="label">Next solunar window</div>
+          <div class="countdown">${escapeHtml(nextSolunar)}</div>
+          ${badge}
+        </div>
+      </div>`;
+    count = 3;
+  }
+
+  return { slides: slide1 + slide2 + slide3, count };
+}
+
+/**
+ * Compute the daylight-countdown hero text from sunrise/sunset strings.
+ * Strings come from the backend as HH:MM local time. Returns null when
+ * unparseable (defensive — astronomy may be missing).
+ */
+function mv2ComputeDaylight(sunriseStr, sunsetStr) {
+  if (!sunriseStr || !sunsetStr) return null;
+  const sr = mv2ParseHM(sunriseStr);
+  const ss = mv2ParseHM(sunsetStr);
+  if (sr === null || ss === null) return null;
+  const now = new Date();
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+  const sunUp = (nowMins >= sr && nowMins < ss);
+  let lead, label, endpoint;
+  if (sunUp) {
+    lead = ss - nowMins;
+    label = "Daylight left";
+    endpoint = sunsetStr;
+  } else {
+    lead = (nowMins < sr) ? (sr - nowMins) : (24 * 60 - nowMins + sr);
+    label = "Sunrise in";
+    endpoint = sunriseStr;
+  }
+  return {
+    leadLabel: label,
+    leadValue: mv2FmtDuration(lead),
+    endpointTime: endpoint,
+    sunUp,
+  };
+}
+
+function mv2ParseHM(s) {
+  // Accept "HH:MM", "H:MM AM/PM", or "HH:MM:SS". Return minutes-since-midnight.
+  if (typeof s !== "string") return null;
+  const m = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?$/i);
+  if (!m) return null;
+  let h = parseInt(m[1], 10);
+  const min = parseInt(m[2], 10);
+  const ampm = (m[3] || "").toUpperCase();
+  if (ampm === "PM" && h < 12) h += 12;
+  if (ampm === "AM" && h === 12) h = 0;
+  if (h < 0 || h > 23 || min < 0 || min > 59) return null;
+  return h * 60 + min;
+}
+
+function mv2FmtDuration(mins) {
+  if (mins < 60) return `${mins}m`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m === 0 ? `${h}h` : `${h}h ${m}m`;
+}
+
+function mv2ReasonContextText(reason, cardData) {
+  // Friendly one-liner per reason code — matches the Phase C prompt
+  // templates so the LLM narration and the card chrome stay aligned.
+  if (!reason) return "";
+  const dam = cardData.dam_operator;
+  const TEMPLATES = {
+    alaska_seasonal: "Live gauge is dormant this time of year — USGS only publishes when the river opens up in summer.",
+    dam_controlled:  dam ? `Flow is ${dam}-controlled — no live USGS gauge. Check the release schedule.` : "Flow is dam-controlled — no live USGS gauge. Check the release schedule.",
+    no_public_gauge: "No public gauge on this water — local shops and outfitters are your best source for current conditions.",
+    gauge_inactive:  "USGS gauge isn't reporting right now — could be a temporary outage. Local shop reports are more reliable.",
+    usgs_timeout:    "USGS timed out on the lookup. Trying again often works.",
+    no_gauge_assigned: "No gauge here — use weather + recent precip as your read.",
+    openmeteo_timeout: "Open-Meteo timed out — weather data not available right now.",
+    astral_error:    "Astronomy data unavailable.",
+  };
+  return TEMPLATES[reason] || "";
+}
+
+function mv2TagForReason(reason) {
+  const MAP = {
+    alaska_seasonal: "seasonal",
+    dam_controlled:  "dam-controlled",
+    no_public_gauge: "no public gauge",
+    gauge_inactive:  "offline",
+    usgs_timeout:    "timeout",
+    no_gauge_assigned: "no gauge",
+    openmeteo_timeout: "timeout",
+    astral_error:    "unavailable",
+  };
+  return MAP[reason] || "no live data";
+}
+
+function mv2RenderSolunarTable(table, dayRating) {
+  if (!Array.isArray(table) || table.length === 0) return "";
+  const SUBKIND_ICON = { transit: "⬆", underfoot: "⬇", moonrise: "🌅", moonset: "🌇" };
+  const rc = (dayRating || "").toLowerCase();
+  const badge = dayRating
+    ? `<span class="mv2-rating-badge ${escapeHtml(rc)}" style="margin-left:8px;vertical-align:middle">${escapeHtml(dayRating)} day</span>`
+    : "";
+  const rows = table.map(w => {
+    const kind = (w.kind || "").toLowerCase();
+    const subkind = (w.subkind || "").toLowerCase();
+    const icon = w.in_daylight ? "☀" : "🌙";
+    const subIcon = SUBKIND_ICON[subkind] || "";
+    const nowCls = w.is_now ? " now" : "";
+    return `<div class="mv2-solunar-row ${escapeHtml(kind)}${nowCls}">
+              <span class="icon">${icon}</span>
+              <span class="label-cell">${escapeHtml(w.label || "")}<span class="sub">${subIcon} ${escapeHtml(subkind)}</span></span>
+              <span class="kind">${escapeHtml(kind)}${w.is_now ? " · NOW" : ""}</span>
+              <span class="time">${escapeHtml(w.start || "")} – ${escapeHtml(w.end || "")}</span>
+            </div>`;
+  }).join("");
+  return `
+    <div class="mv2-panel-title">Today's solunar windows ${badge}</div>
+    <div class="mv2-solunar-table">${rows}</div>`;
+}
+
+function mv2RenderWeatherExtras(hourly, forecast) {
+  let html = "";
+  if (Array.isArray(hourly) && hourly.length) {
+    html += `<div class="mv2-panel-title">Next 24 hours</div>
+             <div class="mv2-hourly">` +
+      hourly.map(h => `<div class="mv2-hour">
+        <div class="t">${escapeHtml(h.t || "")}</div>
+        <div class="em">${escapeHtml(h.icon || "")}</div>
+        <div class="v">${escapeHtml(h.v || "")}</div>
+      </div>`).join("") +
+      `</div>`;
+  }
+  if (Array.isArray(forecast) && forecast.length) {
+    html += `<div class="mv2-panel-title">7-day forecast</div>
+             <div class="mv2-forecast">` +
+      forecast.map(d => `<div class="mv2-fday" style="--l:${(d.l||20)}%;--r:${(d.r||20)}%">
+        <span class="day">${escapeHtml(d.day || "")}</span>
+        <span class="ic">${escapeHtml(d.ic || "")}</span>
+        <span class="lo">${escapeHtml(String(d.lo ?? ""))}°</span>
+        <span class="bar"></span>
+        <span class="hi">${escapeHtml(String(d.hi ?? ""))}°</span>
+      </div>`).join("") +
+      `</div>`;
+  }
+  return html;
+}
+
+/**
+ * Top-level v6 renderer. Takes a bundle (the get_hatch_conditions
+ * result), returns the HTML for the three-card stack. Order:
+ * weather → water → astronomy → radar (placeholder). When a card's
+ * block is missing entirely, skip that card.
+ */
+function renderConditionsCardV2(bundle) {
+  const card_v2 = bundle.card_v2 || {};
+  // Hourly + forecast come on the raw weather block, not in card_v2 yet
+  // (backend keeps them on bundle.raw.weather). Surface them so the
+  // weather card's expanded panel can render the strip.
+  const raw = bundle.raw || {};
+  const weatherRaw = raw.weather || {};
+  const ctx = {
+    userPrefs: null,                      // Phase H wires this up
+    hourly: weatherRaw.hourly_24h || null,
+    forecast: weatherRaw.forecast_7day || null,
+  };
+
+  // Make sure interactions are wired (idempotent).
+  mv2InitInteractions();
+
+  let html = `<div class="mv2-stack">`;
+  if (card_v2.weather_card)   html += mv2RenderCard("weather", card_v2.weather_card, ctx);
+  if (card_v2.water_card)     html += mv2RenderCard("water",   card_v2.water_card,   ctx);
+  if (card_v2.astronomy_card) html += mv2RenderCard("astro",   card_v2.astronomy_card, ctx);
+  // Radar placeholder — Phase F builds out, this card is just a "next
+  // phase" marker so anglers see it's coming.
+  html += `
+    <div class="mv2-card radar">
+      <div class="mv2-art">
+        <img src="${escapeHtml(mv2GetCardArt('radar', null))}" alt=""
+             onerror="this.style.display='none'">
+      </div>
+      <div class="mv2-fv-wrap"><img class="mv2-fv" src="assets/logo-black.png" alt=""></div>
+      <div class="mv2-body">
+        <div class="mv2-head">
+          <div class="mv2-icon"><span class="em">📡</span> Radar</div>
+          <span class="mv2-tag soon">next phase</span>
+        </div>
+        <div class="mv2-hero-wrap" style="max-width:60%">
+          <div class="mv2-hero-slide">
+            <div class="lbl" style="color:#6ee7b7">coming soon</div>
+            <div style="font-size:18px;color:#cbd5e1;font-weight:500;margin-top:6px">
+              Precip radar overlay
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  html += `</div>`;
+  return html;
+}
+
+/**
+ * Wire up tap-to-expand, swipe-nav, and touch-swipe handlers via event
+ * delegation on document. Idempotent — call as many times as you want,
+ * only fires once. Lives on document so it picks up cards rendered into
+ * future chat bubbles too.
+ */
+function mv2InitInteractions() {
+  if (_mv2InteractionsWired) return;
+  _mv2InteractionsWired = true;
+
+  // Make sure the singleton scrim + drill sheet exist in the DOM.
+  // They live at <body> level so they overlay anything.
+  if (!document.getElementById("mv2-scrim")) {
+    const scrim = document.createElement("div");
+    scrim.id = "mv2-scrim";
+    scrim.className = "mv2-scrim";
+    document.body.appendChild(scrim);
+  }
+  if (!document.getElementById("mv2-drill-sheet")) {
+    const sheet = document.createElement("div");
+    sheet.id = "mv2-drill-sheet";
+    sheet.className = "mv2-drill-sheet";
+    document.body.appendChild(sheet);
+  }
+
+  document.addEventListener("click", (e) => {
+    // Drill close button (inside the sheet)
+    if (e.target.closest("[data-mv2-drill-close]")) {
+      e.stopPropagation();
+      mv2CloseDrill();
+      return;
+    }
+    // Scrim — tap outside to close
+    if (e.target.id === "mv2-scrim") {
+      mv2CloseDrill();
+      return;
+    }
+    // Panel row drill — only when the parent card is OPEN. When closed,
+    // we want the click to fall through to the card-toggle handler so
+    // the angler can tap anywhere on a collapsed card to expand it.
+    const drillRow = e.target.closest("[data-mv2-drill]");
+    if (drillRow) {
+      const parentCard = drillRow.closest(".mv2-card");
+      if (parentCard && parentCard.classList.contains("open")) {
+        e.stopPropagation();
+        try {
+          const payload = JSON.parse(decodeURIComponent(drillRow.dataset.mv2Drill));
+          mv2OpenDrill(payload);
+        } catch (err) {
+          console.error("mv2: drill payload parse failed", err);
+        }
+        return;
+      }
+      // else: fall through to card-toggle so collapsed card still expands
+    }
+    // Swipe arrows
+    const swipeBtn = e.target.closest("[data-mv2-swipe]");
+    if (swipeBtn) {
+      e.stopPropagation();
+      const card = swipeBtn.closest(".mv2-card");
+      if (!card) return;
+      const dir = swipeBtn.dataset.mv2Swipe;
+      mv2StepHero(card, dir);
+      return;
+    }
+    // Card-body tap to toggle open/closed
+    const card = e.target.closest(".mv2-card[data-mv2-card]");
+    if (!card) return;
+    if (card.classList.contains("radar")) return;
+    card.classList.toggle("open");
+  });
+
+  // Touch-swipe on the hero area
+  let touchStartX = null;
+  let touchCard = null;
+  document.addEventListener("touchstart", (e) => {
+    const wrap = e.target.closest(".mv2-hero-wrap");
+    if (!wrap) return;
+    const card = wrap.closest(".mv2-card");
+    if (!card || card.classList.contains("radar")) return;
+    touchStartX = e.touches[0].clientX;
+    touchCard = card;
+  }, { passive: true });
+  document.addEventListener("touchend", (e) => {
+    if (touchStartX === null || !touchCard) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) > 40) {
+      mv2StepHero(touchCard, dx < 0 ? "next" : "prev");
+    }
+    touchStartX = null;
+    touchCard = null;
+  });
+}
+
+function mv2StepHero(card, dir) {
+  const cur   = parseInt(card.dataset.mv2HeroIdx || "0", 10);
+  const count = parseInt(card.dataset.mv2HeroCount || "1", 10);
+  const next  = dir === "next" ? Math.min(cur + 1, count - 1) : Math.max(cur - 1, 0);
+  if (next === cur) return;
+
+  card.dataset.mv2HeroIdx = String(next);
+  const track = card.querySelector(".mv2-hero-track");
+  if (track) track.style.transform = `translateX(-${next * 100}%)`;
+
+  // Refresh dots and arrow-disabled states
+  const dots = card.querySelectorAll(".mv2-swipe-dot");
+  dots.forEach((d, i) => d.classList.toggle("on", i === next));
+  const prevBtn = card.querySelector('[data-mv2-swipe="prev"]');
+  const nextBtn = card.querySelector('[data-mv2-swipe="next"]');
+  if (prevBtn) prevBtn.disabled = (next === 0);
+  if (nextBtn) nextBtn.disabled = (next === count - 1);
+}
+
+/**
+ * Open the drill-down sheet for one field. payload = {cardKey, label,
+ * value, unit}. The sheet shows the current value front-and-center plus
+ * a "history coming soon" placeholder for the chart blocks — backend
+ * doesn't surface 24h history yet. Once it does (queued task), the
+ * placeholders swap to real charts here.
+ */
+function mv2OpenDrill(payload) {
+  const sheet = document.getElementById("mv2-drill-sheet");
+  const scrim = document.getElementById("mv2-scrim");
+  if (!sheet || !scrim) return;
+
+  const label = payload.label || "";
+  const value = payload.value;
+  const unit  = payload.unit || "";
+  const empty = (value === null || value === undefined || value === "");
+
+  const currentBlock = empty
+    ? `<div class="mv2-drill-current" style="font-size:22px;font-style:italic;color:#64748b;background:none;-webkit-text-fill-color:#64748b">no live data</div>`
+    : `<div class="mv2-drill-current">${escapeHtml(String(value))}` +
+      (unit ? `<span class="u">${escapeHtml(unit)}</span>` : "") +
+      `</div>`;
+
+  // History blocks — explicit "not yet available" rather than fabricated.
+  // When backend wires real 24h history (queued task), replace these
+  // .mv2-drill-placeholder blocks with the actual chart renderers.
+  const historyBlocks = empty
+    ? `<div class="mv2-drill-note"><span>📭</span>
+         <span>This field has no live data right now. When the feed
+         comes back, history will populate here.</span></div>`
+    : `
+      <div class="mv2-drill-section">
+        <div class="mv2-drill-section-title">Last 24 hours</div>
+        <div class="mv2-drill-placeholder">
+          <span class="em">📊</span>
+          Historical trend coming soon — we're wiring real USGS / Open-Meteo
+          history data so this chart shows the last 24 hours of ${escapeHtml(label.toLowerCase())}.
+        </div>
+      </div>
+      <div class="mv2-drill-section">
+        <div class="mv2-drill-section-title">Yesterday vs today</div>
+        <div class="mv2-drill-placeholder">
+          <span class="em">⏱</span>
+          Yesterday's reading will compare against today's once the
+          history feed is online.
+        </div>
+      </div>
+      <div class="mv2-drill-section">
+        <div class="mv2-drill-section-title">Last 7 days</div>
+        <div class="mv2-drill-placeholder">
+          <span class="em">📅</span>
+          Week trend coming soon.
+        </div>
+      </div>`;
+
+  // Banner uses the SAME art the card uses — Phase H/I/J skin picker
+  // will swap them together. Pass cardKey through mv2GetCardArt so any
+  // future per-card or per-user override is honored here automatically.
+  // TODO(Phase J): when photo cycling ships, decide whether the banner
+  // cycles independently from the card or shares the frame index. For
+  // now they share the same static image (the active skin).
+  const bannerArt = mv2GetCardArt(payload.cardKey, null);
+
+  sheet.innerHTML = `
+    <div class="grip"></div>
+    <div class="mv2-drill-art">
+      <img src="${escapeHtml(bannerArt)}" alt=""
+           onerror="this.style.display='none'">
+      <div class="mv2-drill-fv-wrap">
+        <img class="mv2-drill-fv" src="assets/logo-black.png" alt="">
+      </div>
+    </div>
+    <div class="mv2-drill-head">
+      <div>
+        <div class="mv2-drill-title">${escapeHtml(label)}</div>
+        ${currentBlock}
+      </div>
+      <button class="mv2-drill-close" data-mv2-drill-close type="button" aria-label="Close">✕</button>
+    </div>
+    ${historyBlocks}
+  `;
+
+  sheet.classList.add("on");
+  scrim.classList.add("on");
+}
+
+function mv2CloseDrill() {
+  const sheet = document.getElementById("mv2-drill-sheet");
+  const scrim = document.getElementById("mv2-scrim");
+  if (sheet) sheet.classList.remove("on");
+  if (scrim) scrim.classList.remove("on");
+}
+
+// ───────────────────────────────────────────────────────────────────
+// Dispatcher: pick v6 cards when backend says so, else fall through
+// to the legacy renderer. Preserves the v1 path so an old frontend
+// loaded mid-deploy keeps working.
+// ───────────────────────────────────────────────────────────────────
 function renderConditionsCard(bundle) {
+  if (!bundle) return "";
+  if (bundle.card_schema_version === 2 && bundle.card_v2) {
+    return renderConditionsCardV2(bundle);
+  }
+  return renderConditionsCardV1(bundle);
+}
+
+function renderConditionsCardV1(bundle) {
   // bundle is the full get_hatch_conditions result: {location, raw, factors,
   // sources, missing, ...}. We pull the raw values for honest display —
   // the model narrates from them in its prose, and the user sees the same
@@ -1174,6 +2233,57 @@ function renderMapArtifact(payload) {
   );
 }
 
+/**
+ * Build a marker DOM element for the Mapbox map. The icon is keyed off
+ * marker.type so anglers can read the map at a glance:
+ *   usgs_gauge / wsc_gauge — circular blue tag with a gauge glyph
+ *   requested_location     — amber drop pin (the angler-typed place)
+ *   default                — legacy red drop (older map paths still here)
+ * All SVG, no image dependencies. Anchored at the bottom so the tip
+ * touches the actual lat/lon.
+ */
+function buildMidgeMarkerEl(m) {
+  const el = document.createElement("div");
+  el.className = "midge-marker midge-marker-" + (m.type || "default");
+  el.style.cssText = "display:flex;align-items:flex-end;justify-content:center;line-height:0;cursor:pointer;";
+  const t = m.type || "default";
+  if (t === "usgs_gauge" || t === "wsc_gauge") {
+    // Blue tag with a tiny ruler-style glyph. Reads as "instrument /
+    // measurement point" without saying "USGS" in the icon.
+    el.innerHTML = `
+      <svg width="30" height="38" viewBox="0 0 30 38" xmlns="http://www.w3.org/2000/svg"
+           style="filter:drop-shadow(0 2px 4px rgba(0,0,0,0.45))">
+        <path d="M15 36 L4 18 A11 11 0 1 1 26 18 Z"
+              fill="#2563eb" stroke="#ffffff" stroke-width="1.5"/>
+        <circle cx="15" cy="14" r="6.5" fill="#ffffff"/>
+        <line x1="15" y1="9.5" x2="15" y2="11" stroke="#1e40af" stroke-width="1.3" stroke-linecap="round"/>
+        <line x1="15" y1="17" x2="15" y2="18.5" stroke="#1e40af" stroke-width="1.3" stroke-linecap="round"/>
+        <line x1="10.5" y1="14" x2="12" y2="14" stroke="#1e40af" stroke-width="1.3" stroke-linecap="round"/>
+        <line x1="18" y1="14" x2="19.5" y2="14" stroke="#1e40af" stroke-width="1.3" stroke-linecap="round"/>
+        <line x1="15" y1="14" x2="17.5" y2="11.5" stroke="#dc2626" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>`;
+  } else if (t === "requested_location") {
+    // Amber drop-pin — matches FlyVault accent. Says "you pointed here."
+    el.innerHTML = `
+      <svg width="30" height="38" viewBox="0 0 30 38" xmlns="http://www.w3.org/2000/svg"
+           style="filter:drop-shadow(0 2px 4px rgba(0,0,0,0.45))">
+        <path d="M15 36 L4 18 A11 11 0 1 1 26 18 Z"
+              fill="#c9a87a" stroke="#ffffff" stroke-width="1.5"/>
+        <circle cx="15" cy="14" r="5" fill="#ffffff"/>
+      </svg>`;
+  } else {
+    // Legacy red drop (default marker behavior preserved).
+    el.innerHTML = `
+      <svg width="28" height="36" viewBox="0 0 28 36" xmlns="http://www.w3.org/2000/svg"
+           style="filter:drop-shadow(0 2px 4px rgba(0,0,0,0.45))">
+        <path d="M14 34 L4 17 A10 10 0 1 1 24 17 Z"
+              fill="#e24b4a" stroke="#ffffff" stroke-width="1.5"/>
+        <circle cx="14" cy="13" r="4" fill="#ffffff"/>
+      </svg>`;
+  }
+  return el;
+}
+
 async function mountMapboxMap(domId, payload) {
   const el = document.getElementById(domId);
   if (!el) return;
@@ -1215,7 +2325,12 @@ async function mountMapboxMap(domId, payload) {
   });
   map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
 
-  // Markers
+  // Markers — render different icons by marker.type so the angler can
+  // instantly tell "this is where I asked about" vs "this is where the
+  // data comes from." Three types today:
+  //   usgs_gauge / wsc_gauge — gauge ruler icon, blue (data source)
+  //   requested_location     — location pin, amber (what angler typed)
+  //   default                — red drop (legacy / unspecified)
   const markers = config.markers || [];
   markers.forEach(m => {
     if (typeof m.lat !== "number" || typeof m.lon !== "number") return;
@@ -1225,7 +2340,8 @@ async function mountMapboxMap(domId, payload) {
         escapeHtml(m.popup).replace(/\n/g, "<br>") +
         `</div>`
       : `<div style="font-size:12px"><strong>${escapeHtml(m.label || "")}</strong></div>`;
-    new mapboxgl.Marker({ color: "#e24b4a" })
+    const el = buildMidgeMarkerEl(m);
+    new mapboxgl.Marker({ element: el, anchor: "bottom" })
       .setLngLat([m.lon, m.lat])
       .setPopup(new mapboxgl.Popup({ offset: 18 }).setHTML(popupHtml))
       .addTo(map);
