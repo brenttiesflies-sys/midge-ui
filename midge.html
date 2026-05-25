@@ -626,11 +626,60 @@
   }
 
   /* Map */
-  .map-wrap { padding: 0; }
+  .map-wrap { padding: 0; position: relative; }
   .midge-map {
     width: 100%;
     height: 260px;
     background: #1a1f1d;
+  }
+
+  /* Brookie banner that sits over the top edge of the map and fades
+     down into transparency, mirroring the card hero treatment (which
+     fades art LEFT→RIGHT into the card body — here we fade TOP→DOWN
+     into the map tiles). The fade ends mid-banner so the angler still
+     sees the map. FlyVault logo silhouette tucks into the corner.
+     Routes through mv2GetCardArt() so Phase H/I/J skin changes apply
+     here too. */
+  .mv2-map-banner {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 76px;
+    overflow: hidden;
+    pointer-events: none;  /* never blocks map interaction */
+    z-index: 3;
+  }
+  .mv2-map-banner img.bg {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  /* Top-down fade overlay — banner art fully opaque at the top, fading
+     to transparent by ~75% of its height. Tuned so the map's town/road
+     labels at the top edge remain readable underneath. */
+  .mv2-map-banner::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom,
+      rgba(26, 33, 46, 0.00) 0%,
+      rgba(26, 33, 46, 0.00) 30%,
+      rgba(26, 33, 46, 0.20) 55%,
+      rgba(26, 33, 46, 0.65) 80%,
+      rgba(26, 33, 46, 0.92) 100%);
+    pointer-events: none;
+  }
+  .mv2-map-banner .fv-wrap {
+    position: absolute;
+    top: 4px; right: 8px;
+    width: 56px; height: 56px;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .mv2-map-banner .fv-wrap img {
+    width: 48px; height: 48px;
+    filter: brightness(0) saturate(100%) contrast(1000%)
+            drop-shadow(0 1px 0 #000)
+            drop-shadow(0 2px 2px rgba(0,0,0,0.5));
   }
   .map-overlays {
     padding: 8px 14px;
@@ -2223,10 +2272,25 @@ function renderMapArtifact(payload) {
   // Mount the map asynchronously — has to wait for the token fetch.
   setTimeout(() => mountMapboxMap(id, payload), 0);
 
+  // Brookie banner over the top edge of the map. Routes through the
+  // same skin lookup the cards use so when Phase H ships the skin
+  // picker, the map banner skins along with everything else. We use
+  // a generic 'map' cardKey because the angler hasn't picked a
+  // specific water/weather/astro context here — Phase H can decide
+  // whether 'map' deserves its own skin slot or reuses 'water'.
+  const bannerArt = (typeof mv2GetCardArt === "function")
+    ? mv2GetCardArt("map", null) : "assets/brookie-art-1.png";
+  const bannerHtml =
+    `<div class="mv2-map-banner">` +
+      `<img class="bg" src="${escapeHtml(bannerArt)}" alt=""` +
+      ` onerror="this.style.display='none'">` +
+      `<div class="fv-wrap"><img src="assets/logo-black.png" alt=""></div>` +
+    `</div>`;
+
   return (
     `<div class="artifact">` +
       header +
-      `<div class="map-wrap"><div id="${id}" class="midge-map"></div></div>` +
+      `<div class="map-wrap">${bannerHtml}<div id="${id}" class="midge-map"></div></div>` +
       overlayBar +
     `</div>` +
     condHtml
