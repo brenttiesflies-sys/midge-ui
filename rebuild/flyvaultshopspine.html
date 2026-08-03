@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>FlyVault — Christian's Fly Shop</title>
+<style>
+  /* ---- TOKENS: inherited verbatim from the locked card DNA ---- */
+  :root{
+    --ink:#221d14; --ink-soft:#5e5343; --paper:#f4efe3;
+    --gold:#c8943f; --gold-deep:#a9762b; --oxblood:#7c3a2d;
+    --green:#3f6b4a; --dark:#1a140d; --hair:#ddd6c6;
+    --bg:#2b2a24;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{background:var(--bg);color:var(--ink);
+    font-family:'Iowan Old Style','Palatino Linotype','Georgia',serif}
+  body{max-width:480px;margin:0 auto;position:relative;overflow-x:hidden;min-height:100vh}
+  .util{font-family:-apple-system,'Segoe UI',sans-serif}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  /* ambient bench backdrop — the shared scene layer */
+  .ambient{position:fixed;inset:0;z-index:0;
+    background:
+      radial-gradient(120% 80% at 50% -10%, #3a382f 0%, #26251f 55%, #1c1b16 100%);}
+  .ambient::after{content:'';position:absolute;inset:0;
+    background:linear-gradient(to bottom, rgba(0,0,0,.0) 60%, rgba(0,0,0,.35) 100%)}
+
+  .wrap{position:relative;z-index:5}
+
+  header{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;
+    padding:14px 18px;background:rgba(20,18,12,.55);backdrop-filter:blur(14px);
+    border-bottom:1px solid rgba(255,255,255,.08)}
+  .brand{font-family:-apple-system,sans-serif;font-weight:800;letter-spacing:.5px;font-size:15px;color:#f4efe3}
+  .brand span{color:var(--gold)}
+  .back,.ham{font-size:26px;color:#f4efe3;line-height:1;cursor:pointer;width:30px;text-align:center}
+  #spine-view .back{visibility:hidden}
+
+  /* ---- SHOP MASTHEAD ---- */
+  .mast{padding:26px 22px 6px;color:#f4efe3}
+  .mast .eyebrow{font-family:-apple-system,sans-serif;font-size:11px;font-weight:700;
+    letter-spacing:2.5px;text-transform:uppercase;color:var(--gold);opacity:.95}
+  .mast h1{font-size:31px;line-height:1.02;margin:8px 0 0;letter-spacing:.3px}
+  .mast .posture{font-family:-apple-system,sans-serif;font-size:12.5px;line-height:1.5;
+    color:#cfc6b4;margin-top:12px;display:flex;gap:8px;align-items:flex-start}
+  .mast .posture b{color:#f4efe3;font-weight:700}
+  .mast .quick{display:flex;gap:9px;margin-top:16px;flex-wrap:wrap}
+  .mast .quick button{font-family:-apple-system,sans-serif;font-size:12.5px;font-weight:700;
+    color:#f4efe3;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16);
+    border-radius:999px;padding:9px 15px;cursor:pointer;transition:background .2s}
+  .mast .quick button.primary{background:var(--gold-deep);border-color:var(--gold-deep)}
+  .mast .quick button:active{background:rgba(255,255,255,.2)}
+
+  /* ---- THE SPINE: stack of carousel rows ---- */
+  .spine{padding:18px 0 60px}
+  .row{margin:22px 0}
+  .row-head{display:flex;align-items:baseline;justify-content:space-between;padding:0 22px 11px}
+  .row-head .rl{color:#f4efe3;font-size:20px;letter-spacing:.2px}
+  .row-head .rs{font-family:-apple-system,sans-serif;font-size:11px;color:#b3aa98;
+    text-transform:uppercase;letter-spacing:1.4px}
+  .row-head .grip{font-family:-apple-system,sans-serif;font-size:11px;color:#8d8470;
+    display:flex;align-items:center;gap:5px;cursor:grab}
+  .row-head .grip::before{content:'⠿';font-size:14px;letter-spacing:-1px}
+
+  .rail{display:flex;gap:14px;overflow-x:auto;padding:2px 22px 6px;
+    scroll-snap-type:x mandatory;scrollbar-width:none}
+  .rail::-webkit-scrollbar{display:none}
+
+  /* ---- THE CARD (atom) ---- */
+  .card{flex:0 0 64%;max-width:230px;scroll-snap-align:start;cursor:pointer;
+    background:var(--dark);border-radius:16px;overflow:hidden;
+    box-shadow:0 8px 24px rgba(10,8,4,.4);border:1px solid rgba(255,255,255,.05);
+    transition:transform .18s ease, box-shadow .18s ease}
+  .card:active{transform:scale(.975)}
+  .card .pic{aspect-ratio:4/5;background:#3a3d38 center/cover;position:relative}
+  .card .pic::after{content:'';position:absolute;inset:0;
+    background:linear-gradient(to bottom,transparent 55%,rgba(0,0,0,.55) 100%)}
+  .card .cap{padding:12px 14px 14px}
+  .card .cap .n{color:#f4f1e6;font-size:17px;line-height:1.12}
+  .card .cap .price{font-family:-apple-system,sans-serif;font-size:13px;color:var(--gold);
+    font-weight:700;margin-top:6px}
+  .card .cap .price .from{color:#b3aa98;font-weight:500;font-size:11px}
+
+  /* "add a carousel" affordance — meet the seller where they are */
+  .addrow{margin:26px 22px 0;border:1.5px dashed rgba(255,255,255,.18);border-radius:16px;
+    padding:20px;text-align:center;color:#b3aa98;font-family:-apple-system,sans-serif;font-size:13px;cursor:pointer}
+  .addrow b{display:block;color:#f4efe3;font-size:14px;margin-bottom:3px}
+
+  /* ============================================================
+     OPEN-IN-PLACE DETAIL — does not teleport. It unfurls over the
+     spine and a Back fold returns you to exactly where you were.
+     ============================================================ */
+  .detail{position:fixed;inset:0;z-index:30;overflow-y:auto;background:var(--bg);
+    transform:translateY(100%);transition:transform .34s cubic-bezier(.22,.61,.36,1);
+    visibility:hidden}
+  .detail.open{transform:translateY(0);visibility:visible}
+
+  .detail .ambient2{position:absolute;inset:0;z-index:0;
+    background:radial-gradient(130% 70% at 50% 0%, #423f33 0%, #2a2820 60%, #1d1b15 100%)}
+
+  .dwrap{position:relative;z-index:5;padding-top:60px}
+  .hero{padding:0 40px}
+  .frame{position:relative;border-radius:18px;overflow:hidden;aspect-ratio:3/4;
+    background:#3c4a3f center/cover;
+    box-shadow:0 26px 60px rgba(10,8,4,.6);border:5px solid rgba(255,255,255,.82)}
+  .frame::after{content:'';position:absolute;inset:0;
+    background:linear-gradient(to bottom,transparent 42%,rgba(0,0,0,.72) 100%)}
+  .frame .cap{position:absolute;left:0;right:0;bottom:0;z-index:2;text-align:center;padding:0 16px 20px;color:#f6f3ea}
+  .eyebrow{font-family:-apple-system,sans-serif;font-size:10px;font-weight:700;
+    letter-spacing:2.5px;text-transform:uppercase;opacity:.92}
+  .frame .cap h1{font-size:27px;line-height:1;letter-spacing:.4px;margin:7px 0 0}
+  .diamond{margin:10px auto;width:10px;height:10px;border:1.5px solid rgba(246,243,234,.85);transform:rotate(45deg)}
+  .plate{font-family:-apple-system,sans-serif;font-size:11.5px;letter-spacing:.4px;opacity:.92}
+  .scene-note{text-align:center;font-family:-apple-system,sans-serif;font-size:11px;
+    letter-spacing:1.5px;text-transform:uppercase;color:#c9bfa9;padding:15px 0 0}
+
+  .sheet{position:relative;z-index:5;margin-top:26px;background:var(--paper);
+    border-radius:24px 24px 0 0;padding:8px 0 48px;box-shadow:0 -10px 40px rgba(10,8,4,.4);
+    min-height:50vh}
+  .grab{width:42px;height:5px;background:var(--hair);border-radius:3px;margin:12px auto 4px}
+
+  .ask{margin:18px 22px 0;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .ask .k{font-family:-apple-system,sans-serif;font-size:12px;font-weight:700;
+    text-transform:uppercase;letter-spacing:1.5px;color:var(--green)}
+  .ask .v{font-size:22px;color:var(--ink)}
+  .ask .v .alt{font-size:15px;color:var(--ink-soft)}
+
+  .label{font-family:-apple-system,sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;
+    text-transform:uppercase;color:var(--green);padding:24px 22px 8px}
+  p.body{font-size:17px;line-height:1.55;padding:0 22px;color:#2c2820}
+
+  .specs{display:flex;gap:10px;padding:16px 20px 4px;overflow-x:auto;scrollbar-width:none}
+  .specs::-webkit-scrollbar{display:none}
+  .spec{flex:0 0 auto;text-align:center;padding:4px 16px;border-right:1px solid var(--hair)}
+  .spec:last-child{border-right:none}
+  .spec .k{font-family:-apple-system,sans-serif;font-size:10.5px;color:var(--ink-soft);
+    text-transform:uppercase;letter-spacing:1px}
+  .spec .v{font-size:17px;margin-top:3px}
+
+  /* contact-seller: the connect-not-transact posture, expressed as a control */
+  .contact{margin:22px 20px 0;display:flex;align-items:center;justify-content:center;gap:8px;
+    background:var(--dark);color:var(--paper);border:none;border-radius:13px;padding:15px;
+    font-family:-apple-system,sans-serif;font-weight:700;font-size:15px;cursor:pointer;width:calc(100% - 40px)}
+  .posture-min{margin:10px 22px 0;font-family:-apple-system,sans-serif;font-size:12px;
+    color:var(--ink-soft);line-height:1.45;text-align:center}
+
+  /* RECURSIVE INNER CAROUSEL — "more from this shop", stays on the seller */
+  .moreband{margin:30px 22px 4px}
+  .moreband .ml{font-size:19px;color:var(--ink)}
+  .moreband .ms{font-family:-apple-system,sans-serif;font-size:12.5px;color:var(--ink-soft);margin-top:3px}
+  .rail.inner{padding:8px 22px 6px}
+  .rail.inner .card{background:#efe9db;border:1px solid var(--hair);box-shadow:0 5px 16px rgba(40,34,22,.12)}
+  .rail.inner .card .cap .n{color:var(--ink)}
+  .rail.inner .card .pic::after{background:linear-gradient(to bottom,transparent 60%,rgba(0,0,0,.35) 100%)}
+
+  .customize{margin:30px 18px 0;border-left:3px solid var(--gold);background:rgba(200,148,63,.1);
+    border-radius:0 12px 12px 0;padding:13px 16px;font-family:-apple-system,sans-serif;
+    font-size:12.5px;color:#6c5a30;line-height:1.45}
+  .customize b{color:var(--gold-deep)}
+
+  /* tiny helper so the demo's image blocks read as photos, not voids */
+  .ph{background-size:cover;background-position:center}
+  .p-bobbin{background:linear-gradient(135deg,#6b7a55,#3f4a35)}
+  .p-bobbin2{background:linear-gradient(135deg,#7d6f4e,#473d29)}
+  .p-thread{background:linear-gradient(135deg,#8a5a4a,#4a2e26)}
+  .p-thread2{background:linear-gradient(135deg,#9a7a4a,#5a4326)}
+  .p-tool{background:linear-gradient(135deg,#5a6b6b,#2e3a3a)}
+  .p-tool2{background:linear-gradient(135deg,#6b5a6b,#3a2e3a)}
+  .p-fly{background:linear-gradient(135deg,#7a6b3a,#4a3a1a)}
+
+  .hint{position:fixed;bottom:0;left:50%;transform:translateX(-50%);z-index:50;
+    background:rgba(20,18,12,.9);color:#cfc6b4;font-family:-apple-system,sans-serif;font-size:11px;
+    padding:7px 16px;border-radius:999px 999px 0 0;letter-spacing:.3px;
+    border:1px solid rgba(255,255,255,.1);border-bottom:none}
+</style>
+</head>
+<body>
+  <div class="ambient" aria-hidden="true"></div>
+
+  <!-- ================= THE SPINE ================= -->
+  <div class="wrap" id="spine-view">
+    <header>
+      <span class="back" aria-hidden="true">‹</span>
+      <div class="brand">FLY<span>VAULT</span></div>
+      <span class="ham">☰</span>
+    </header>
+
+    <div class="mast">
+      <div class="eyebrow util">Fly Shop · Maker direct</div>
+      <h1>Christian's Fly Shop</h1>
+      <div class="posture util">
+        <span>⚖︎</span>
+        <span><b>FlyVault connects, it doesn't take a cut.</b> You arrange the sale and payment directly with Christian — we just point the way.</span>
+      </div>
+      <div class="quick">
+        <button class="primary util" onclick="openDetail('bobbin')">Featured: wooden bobbins</button>
+        <button class="util">Message Christian</button>
+      </div>
+    </div>
+
+    <div class="spine">
+      <!-- ROW 1 — seller-named -->
+      <div class="row">
+        <div class="row-head">
+          <div><div class="rl">Hand-turned bobbins</div></div>
+          <span class="grip util">arrange</span>
+        </div>
+        <div class="rail">
+          <div class="card" onclick="openDetail('bobbin')">
+            <div class="pic ph p-bobbin"></div>
+            <div class="cap"><div class="n">Brook-trout wooden bobbin</div>
+              <div class="price util">$75 <span class="from">painted / epoxied</span></div></div>
+          </div>
+          <div class="card" onclick="openDetail('bobbin')">
+            <div class="pic ph p-bobbin2"></div>
+            <div class="cap"><div class="n">Bare hardwood bobbin</div>
+              <div class="price util">$45 <span class="from">+ shipping</span></div></div>
+          </div>
+          <div class="card" onclick="openDetail('bobbin')">
+            <div class="pic ph p-bobbin"></div>
+            <div class="cap"><div class="n">Burl-handle bobbin</div>
+              <div class="price util">$90</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 2 — seller-named -->
+      <div class="row">
+        <div class="row-head">
+          <div><div class="rl">Silks &amp; threads</div></div>
+          <span class="grip util">arrange</span>
+        </div>
+        <div class="rail">
+          <div class="card" onclick="openDetail('bobbin')">
+            <div class="pic ph p-thread"></div>
+            <div class="cap"><div class="n">Kimono silk — oxblood</div>
+              <div class="price util">$14 <span class="from">/ spool</span></div></div>
+          </div>
+          <div class="card" onclick="openDetail('bobbin')">
+            <div class="pic ph p-thread2"></div>
+            <div class="cap"><div class="n">Pearsall's gossamer, gold</div>
+              <div class="price util">$12</div></div>
+          </div>
+          <div class="card" onclick="openDetail('bobbin')">
+            <div class="pic ph p-thread"></div>
+            <div class="cap"><div class="n">Naples silk, claret</div>
+              <div class="price util">$13</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 3 — seller-named -->
+      <div class="row">
+        <div class="row-head">
+          <div><div class="rl">This week only</div><div class="rs util">while they last</div></div>
+          <span class="grip util">arrange</span>
+        </div>
+        <div class="rail">
+          <div class="card" onclick="openDetail('bobbin')">
+            <div class="pic ph p-tool"></div>
+            <div class="cap"><div class="n">Turned-handle bodkin</div>
+              <div class="price util">$22</div></div>
+          </div>
+          <div class="card" onclick="openDetail('bobbin')">
+            <div class="pic ph p-tool2"></div>
+            <div class="cap"><div class="n">Hardwood hackle gauge</div>
+              <div class="price util">$28</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- the seller builds their own store: add another row -->
+      <div class="addrow" onclick="alert('In the real shop: name a new row, pick a display (carousel or grid), drop items in. The seller arranges their own store.')">
+        <b>+ Add another shelf</b>
+        Name it, fill it, drag to reorder. Your shop, your layout.
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= OPEN-IN-PLACE DETAIL ================= -->
+  <div class="detail" id="detail-view">
+    <div class="ambient2" aria-hidden="true"></div>
+    <header>
+      <span class="back" onclick="closeDetail()">‹</span>
+      <div class="brand">FLY<span>VAULT</span></div>
+      <span class="ham">☰</span>
+    </header>
+    <div class="dwrap">
+      <div class="hero">
+        <div class="frame ph p-bobbin">
+          <div class="cap">
+            <div class="eyebrow">Tool · Hand-turned</div>
+            <h1>Brook-trout wooden bobbin</h1>
+            <div class="diamond"></div>
+            <div class="plate">Made by Christian Andrews</div>
+          </div>
+        </div>
+      </div>
+      <div class="scene-note util">At the bench · One of a kind · Brook-trout finish</div>
+
+      <div class="sheet">
+        <div class="grab"></div>
+
+        <div class="ask">
+          <span class="k">Asking</span>
+          <span class="v">$75 <span class="alt">painted &amp; epoxied · $45 bare</span></span>
+        </div>
+
+        <div class="specs">
+          <div class="spec"><div class="k util">Wood</div><div class="v">Mixed hardwoods</div></div>
+          <div class="spec"><div class="k util">Tube</div><div class="v">Stainless</div></div>
+          <div class="spec"><div class="k util">Tension</div><div class="v">Washer + nut</div></div>
+        </div>
+
+        <div class="label util">About this piece</div>
+        <p class="body">Bobbins turned from a variety of woods and finished by hand. The thread rides on a Singer Class 66 sewing-machine bobbin, tensioned through a rubber washer and a flat knurled nut. Each painted version is finished in a brook-trout scheme and sealed in epoxy — no two are alike.</p>
+
+        <button class="contact util" onclick="alert('Opens a direct message to Christian. FlyVault never handles the money.')">✉ Message Christian to arrange this</button>
+        <div class="posture-min util">FlyVault connects you to the maker. Price, payment and shipping are arranged directly between you and Christian.</div>
+
+        <!-- RECURSIVE INNER CAROUSEL: keeps the spotlight on THIS seller -->
+        <div class="moreband">
+          <div class="ml">More from Christian's bench</div>
+          <div class="ms util">Other pieces in his shop — not from anyone who paid to be here.</div>
+        </div>
+        <div class="rail inner">
+          <div class="card" onclick="swapDetail('Bare hardwood bobbin','Tool · Hand-turned','$45','p-bobbin2')">
+            <div class="pic ph p-bobbin2"></div>
+            <div class="cap"><div class="n">Bare hardwood bobbin</div>
+              <div class="price util">$45</div></div>
+          </div>
+          <div class="card" onclick="swapDetail('Turned-handle bodkin','Tool · Hand-turned','$22','p-tool')">
+            <div class="pic ph p-tool"></div>
+            <div class="cap"><div class="n">Turned-handle bodkin</div>
+              <div class="price util">$22</div></div>
+          </div>
+          <div class="card" onclick="swapDetail('Kimono silk — oxblood','Material · Silk','$14','p-thread')">
+            <div class="pic ph p-thread"></div>
+            <div class="cap"><div class="n">Kimono silk — oxblood</div>
+              <div class="price util">$14</div></div>
+          </div>
+        </div>
+
+        <div class="customize util">
+          ✨ This is Christian's shop skin. <b>Make a shop yours</b> — background, colors, the way the shelves are laid out, all yours to set.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hint util" id="hint">Tap a card — it opens here, no new page. ‹ Back folds it away.</div>
+
+<script>
+  var spine = document.getElementById('spine-view');
+  var detail = document.getElementById('detail-view');
+  var hint = document.getElementById('hint');
+  var frame = detail.querySelector('.frame');
+  var h1 = detail.querySelector('.frame h1');
+  var eyebrow = detail.querySelector('.frame .eyebrow');
+  var askv = detail.querySelector('.ask .v');
+
+  function openDetail(){
+    detail.classList.add('open');
+    detail.scrollTop = 0;
+    hint.style.display='none';
+  }
+  function closeDetail(){
+    detail.classList.remove('open');
+  }
+  // swapDetail: the inner-carousel rule — navigate WITHIN the open view,
+  // we don't stack a new sheet on top (no hall of mirrors).
+  function swapDetail(name, eb, price, picClass){
+    eyebrow.textContent = eb;
+    h1.textContent = name;
+    askv.innerHTML = price;
+    frame.className = 'frame ph ' + picClass;
+    detail.scrollTop = 0;
+  }
+</script>
+</body>
+</html>
