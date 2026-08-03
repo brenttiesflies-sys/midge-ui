@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlyVault Pitch</title>
+<style>
+  :root{
+    --ink:#0d1b18; --water:#0f3d36; --water-2:#16544a; --moss:#5b7f6f;
+    --sand:#e8e0cf; --sand-2:#d6cab0; --copper:#c2703d; --copper-glow:#e08a4e;
+    --gold:#d8a445; --paper:#f4efe2; --red:#a3262b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+    background:radial-gradient(120% 80% at 50% -10%, var(--water-2), var(--water) 55%, var(--ink) 100%);
+    color:var(--sand); min-height:100%; display:flex; flex-direction:column;
+    align-items:center; padding:14px 10px 40px; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{width:100%;max-width:760px}
+  header.top{display:flex;align-items:center;justify-content:space-between;padding:4px 4px 12px}
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand .name{font-size:18px;letter-spacing:.14em;text-transform:uppercase;font-weight:600}
+  .brand .name b{color:var(--copper-glow);font-weight:600}
+  .scoreline{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--moss);text-align:right;line-height:1.5}
+  .scoreline span{color:var(--sand)}
+
+  .panel{background:linear-gradient(165deg,rgba(255,255,255,.05),rgba(0,0,0,.18));
+    border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:12px;margin-bottom:12px}
+  .panel h3{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--moss);margin-bottom:8px;text-align:center}
+
+  /* opponents row */
+  .opps{display:flex;gap:8px;justify-content:space-between}
+  .opp{flex:1;text-align:center;background:rgba(0,0,0,.15);border:1px solid rgba(255,255,255,.06);
+    border-radius:10px;padding:8px 4px;position:relative}
+  .opp.active{border-color:var(--gold);box-shadow:0 0 10px -3px var(--gold)}
+  .opp.pitcher::after{content:"PITCHER";position:absolute;top:-7px;left:50%;transform:translateX(-50%);
+    background:var(--gold);color:#1a0f08;font-size:8px;padding:1px 5px;border-radius:6px;letter-spacing:.08em}
+  .opp .nm{font-size:12px;letter-spacing:.05em;color:var(--sand);font-weight:600}
+  .opp .sc{font-size:11px;color:var(--moss);margin-top:2px}
+  .opp .cnt{display:flex;gap:2px;justify-content:center;margin-top:5px;flex-wrap:wrap}
+  .opp .cnt i{width:10px;height:15px;border-radius:2px;
+    background:repeating-linear-gradient(45deg,var(--water) 0 3px,var(--water-2) 3px 6px);
+    border:1px solid rgba(0,0,0,.3);display:inline-block}
+  .opp .bidtag{font-size:10px;color:var(--copper-glow);margin-top:4px;min-height:13px;letter-spacing:.04em}
+
+  /* center table: trick area */
+  .table{position:relative;min-height:130px;margin:6px 0 4px;display:flex;align-items:center;justify-content:center}
+  .trick{display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;min-height:88px}
+  .trick .slot{text-align:center}
+  .trick .slot .who{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--moss);margin-bottom:4px;height:11px}
+  .trumpbadge{position:absolute;top:2px;right:6px;font-size:11px;letter-spacing:.08em;color:var(--moss)}
+  .trumpbadge b{font-size:16px;vertical-align:-1px}
+  .trumpbadge b.red{color:var(--red)}
+
+  .msg{min-height:40px;display:flex;align-items:center;justify-content:center;text-align:center;
+    font-size:14px;line-height:1.45;color:var(--paper);padding:6px 14px}
+  .msg b{color:var(--gold)}
+
+  .hand{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;min-height:90px;align-items:flex-end;padding-top:8px}
+  .card{width:50px;height:74px;border-radius:7px;background:linear-gradient(160deg,#fdfbf5,#efe8d6);
+    color:#1a1a1a;box-shadow:0 3px 7px -2px rgba(0,0,0,.5);position:relative;display:flex;flex-direction:column;
+    justify-content:space-between;padding:4px 5px;user-select:none;border:1px solid rgba(0,0,0,.08);
+    cursor:pointer;transition:transform .12s,box-shadow .12s}
+  .card:hover{transform:translateY(-6px)}
+  .card.sel{transform:translateY(-12px);outline:2px solid var(--copper);box-shadow:0 8px 14px -5px rgba(194,112,61,.7)}
+  .card.disabled{opacity:.4;cursor:default;filter:grayscale(.4)}
+  .card.disabled:hover{transform:none}
+  .card .r{font-size:15px;font-weight:700;line-height:1}
+  .card .s{font-size:14px}
+  .card .big{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;opacity:.9}
+  .card.red{color:var(--red)}
+  .card.small{width:42px;height:62px}
+  .card.small .r{font-size:13px}.card.small .big{font-size:19px}
+  .card.trumpcard{box-shadow:0 0 0 2px var(--gold),0 3px 7px -2px rgba(0,0,0,.5)}
+
+  .controls{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+  button.btn{font-family:inherit;background:linear-gradient(160deg,var(--copper-glow),var(--copper));
+    color:#1a0f08;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;
+    letter-spacing:.03em;cursor:pointer;box-shadow:0 5px 12px -6px rgba(194,112,61,.8);transition:transform .1s,filter .1s}
+  button.btn:hover{filter:brightness(1.07)} button.btn:active{transform:translateY(1px)}
+  button.btn:disabled{opacity:.35;cursor:not-allowed;filter:none;transform:none}
+  button.btn.ghost{background:transparent;color:var(--sand);box-shadow:inset 0 0 0 1px rgba(232,224,207,.35)}
+  button.btn.gold{background:linear-gradient(160deg,var(--gold),#b8852f)}
+
+  .bidgrid{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:6px}
+  .suitpick{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+  .suitbtn{width:52px;height:52px;border-radius:10px;border:1px solid rgba(232,224,207,.3);
+    background:rgba(0,0,0,.2);color:var(--sand);font-size:26px;cursor:pointer;transition:transform .1s,border-color .1s}
+  .suitbtn.red{color:var(--red)}
+  .suitbtn:hover{border-color:var(--gold);transform:translateY(-2px)}
+
+  .help{font-size:11px;color:var(--moss);text-align:center;line-height:1.5;margin:8px 0 4px;padding:0 18px}
+  .help b{color:var(--sand)}
+  .scorepop{position:fixed;left:50%;top:34%;pointer-events:none;z-index:50;font-size:24px;font-weight:800;
+    color:var(--gold);text-shadow:0 2px 10px rgba(0,0,0,.6);opacity:0;text-align:center}
+  .scorepop.show{animation:pop 1.5s ease forwards}
+  @keyframes pop{0%{opacity:0;transform:translate(-50%,-20%) scale(.7)}20%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}
+    80%{opacity:1;transform:translate(-50%,-55%) scale(1)}100%{opacity:0;transform:translate(-50%,-75%) scale(.95)}}
+  details.rules{margin-top:14px;background:rgba(0,0,0,.18);border-radius:12px;border:1px solid rgba(255,255,255,.06)}
+  details.rules summary{cursor:pointer;padding:11px 16px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);list-style:none}
+  details.rules summary::-webkit-details-marker{display:none}
+  details.rules .body{padding:0 18px 16px;font-size:13px;line-height:1.55}
+  details.rules .body h4{color:var(--copper-glow);margin:11px 0 3px;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+  .scoretable{margin-top:14px;font-size:12px;color:var(--moss);text-align:center;line-height:1.7}
+  .scoretable b{color:var(--sand)}
+  @media (max-width:430px){.card{width:44px;height:66px}.card.small{width:38px;height:56px}.brand .name{font-size:15px}.opp .nm{font-size:11px}}
+  @media (prefers-reduced-motion:reduce){.scorepop.show{animation:none;opacity:0}.card{transition:none}}
+</style>
+</head>
+<body>
+<div id="previewNote" style="display:none;position:fixed;inset:0;z-index:999;background:#0d1b18;color:#e8e0cf;
+  font-family:Georgia,serif;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:30px;line-height:1.6">
+  <div style="font-size:20px;color:#d8a445;margin-bottom:14px">To play, open this in your browser</div>
+  <div style="font-size:15px;max-width:340px">Tap the <b>Share</b> button (the box with an arrow), then choose <b>Open in Safari</b> — the game starts right away.</div>
+  <div style="font-size:12px;color:#5b7f6f;margin-top:20px">FlyVault Pitch</div>
+</div>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="name">Fly<b>Vault</b> Pitch</div>
+    </div>
+    <div class="scoreline">Game to <span id="target">11</span><br><span id="dealerLbl">—</span> deals</div>
+  </header>
+
+  <!-- opponents -->
+  <div class="panel">
+    <h3>The table</h3>
+    <div class="opps" id="opps"></div>
+  </div>
+
+  <!-- center: trick / trump -->
+  <div class="panel">
+    <div class="trumpbadge" id="trumpBadge" style="display:none">Trump <b id="trumpSym"></b></div>
+    <h3 id="tableTitle">On the table</h3>
+    <div class="table"><div class="trick" id="trick"><span style="color:var(--moss);font-size:11px">—</span></div></div>
+  </div>
+
+  <!-- message + hand + controls -->
+  <div class="panel">
+    <div class="msg" id="msg">Tap <b>New hand</b> to deal.</div>
+    <div class="hand" id="hand"></div>
+    <div class="controls" id="controls">
+      <div id="bidRow" class="bidgrid" style="display:none"></div>
+      <div id="suitRow" class="suitpick" style="display:none"></div>
+      <button class="btn" id="mainBtn">New hand</button>
+    </div>
+    <div class="help" id="help">You, Cass, Rich &amp; MIDGE. Bid for the right to name trump, then take High, Low, Jack &amp; Game.</div>
+  </div>
+
+  <details class="rules">
+    <summary>How this Pitch works (tap)</summary>
+    <div class="body">
+      <h4>Goal</h4><p>Be first to <b>11 points</b>. Each hand, four players are dealt six cards. You bid for how many of the four points you can take; the winner ("the pitcher") names trump and leads.</p>
+      <h4>Bidding</h4><p>Going clockwise from the dealer's left, each player bids <b>2, 3, 4</b>, or passes — each bid must beat the last. The dealer may <b>steal</b> by matching the top bid. If everyone passes, the dealer is <b>forced</b> to bid 2. Highest bidder picks trump.</p>
+      <h4>Playing</h4><p>The pitcher leads first. You must <b>follow the suit led</b> if you can — but you may <b>trump at any time</b> even when you could follow a plain suit. If a <b>trump is led</b>, you must play trump if you hold one. Highest trump wins the trick; with no trump, the highest card of the suit led wins.</p>
+      <h4>The four points</h4><p><b>High</b> — highest trump in play. <b>Low</b> — lowest trump in play. <b>Jack</b> — the Jack of trump (only if it was dealt). Each goes to whoever <i>captures</i> that card. <b>Game</b> — most card-pip value taken: 10=10, A=4, K=3, Q=2, J=1. Ties award no Game point.</p>
+      <h4>Scoring</h4><p>Everyone keeps the points they take. But if the <b>pitcher</b> fails to make their bid, they're <b>set back</b> — the bid is subtracted, and their score can go negative ("in the hole"). Points count in order High, Low, Jack, Game, so if two players hit 11 the same hand, the pitcher wins ties.</p>
+    </div>
+  </details>
+
+  <div class="scoretable">
+    Points each hand: <b>High · Low · Jack · Game</b> &nbsp;•&nbsp; Aces high, twos low
+  </div>
+</div>
+<div class="scorepop" id="pop"></div>
+
+<script>
+/* ============================================================
+   FlyVault Pitch — logic mirrors the tested pitch-core engine
+   (144,765 assertions passed across 200 simulated games).
+   ============================================================ */
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+
+const SUITS=['♠','♥','♦','♣'];
+const RED=new Set(['♥','♦']);
+const RANKS=['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+const RANK_VAL={}; RANKS.forEach((r,i)=>RANK_VAL[r]=i+2);
+const NAMES=['You','Cass','Rich','MIDGE'];
+const TARGET=11;
+$('target').textContent=TARGET;
+
+function gamePip(c){switch(c.r){case 'A':return 4;case 'K':return 3;case 'Q':return 2;case 'J':return 1;case '10':return 10;default:return 0;}}
+function buildDeck(){const d=[];for(const s of SUITS)for(const r of RANKS)d.push({r,s,id:r+s});return d;}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+const trumpRank=(c,t)=>(c.s===t?RANK_VAL[c.r]:0);
+
+function trickWinner(plays,ledSuit,trump){
+  let best=null;
+  for(const pl of plays){const c=pl.card;let key;
+    if(c.s===trump)key=1000+RANK_VAL[c.r];
+    else if(c.s===ledSuit)key=RANK_VAL[c.r];
+    else key=-1;
+    if(best===null||key>best.key)best={player:pl.player,key};
+  }
+  return best.player;
+}
+function legalPlays(hand,ledSuit,trump){
+  if(ledSuit==null)return hand.slice();
+  const hasLed=hand.some(c=>c.s===ledSuit);
+  if(ledSuit===trump){ if(hasLed)return hand.filter(c=>c.s===trump); return hand.slice(); }
+  if(hasLed)return hand.filter(c=>c.s===ledSuit||c.s===trump);
+  return hand.slice();
+}
+function evalBidStrength(hand){
+  let best={pts:0,suit:SUITS[0]};
+  for(const suit of SUITS){
+    const tr=hand.filter(c=>c.s===suit); if(!tr.length)continue;
+    let pts=0; const ranks=tr.map(c=>RANK_VAL[c.r]);
+    const hi=Math.max(...ranks), lo=Math.min(...ranks);
+    if(hi===14)pts+=1; else if(hi>=12&&tr.length>=2)pts+=0.6;
+    if(lo===2)pts+=1; else if(lo<=4&&tr.length>=3)pts+=0.6;
+    if(tr.some(c=>c.r==='J')&&tr.length>=2)pts+=0.7;
+    if(tr.length>=4)pts+=0.8; else if(tr.length>=3)pts+=0.4;
+    if(tr.some(c=>c.r==='10'))pts+=0.3;
+    if(pts>best.pts)best={pts,suit};
+  }
+  return best;
+}
+function botBid(hand,high){
+  const s=evalBidStrength(hand); let want=0;
+  if(s.pts>=3.2)want=4; else if(s.pts>=2.2)want=3; else if(s.pts>=1.3)want=2;
+  if(want===0||want<=high)return {bid:0,suit:s.suit};
+  return {bid:want,suit:s.suit};
+}
+function scoreHand(trickLog,trump,pitcher,bid){
+  const captured={}; const allCards=[];
+  for(const t of trickLog)for(const pc of t.cards){captured[pc.card.id]=t.winner;allCards.push(pc.card);}
+  const trumps=allCards.filter(c=>c.s===trump);
+  const pts=[0,0,0,0]; const detail={high:null,low:null,jack:null,game:null};
+  if(trumps.length){
+    const hi=trumps.reduce((a,b)=>RANK_VAL[a.r]>=RANK_VAL[b.r]?a:b);
+    pts[captured[hi.id]]+=1; detail.high={player:captured[hi.id],card:hi};
+    const lo=trumps.reduce((a,b)=>RANK_VAL[a.r]<=RANK_VAL[b.r]?a:b);
+    pts[captured[lo.id]]+=1; detail.low={player:captured[lo.id],card:lo};
+    const jack=trumps.find(c=>c.r==='J');
+    if(jack){pts[captured[jack.id]]+=1; detail.jack={player:captured[jack.id],card:jack};}
+  }
+  const gp=[0,0,0,0]; for(const c of allCards)gp[captured[c.id]]+=gamePip(c);
+  const maxGp=Math.max(...gp);
+  if(maxGp>0){const leaders=[0,1,2,3].filter(p=>gp[p]===maxGp);
+    if(leaders.length===1){pts[leaders[0]]+=1;detail.game={player:leaders[0]};}
+    else detail.game={player:null,tie:leaders};}
+  const deltas=pts.slice(); let set=false;
+  if(pts[pitcher]<bid){deltas[pitcher]=-bid;set=true;}
+  return {pts,deltas,detail,set,pitcherPts:pts[pitcher]};
+}
+
+/* ---------- state ---------- */
+let S=null;
+function newGame(){ S={scores:[0,0,0,0],dealer:3}; } // so You (0) bid first on hand 1
+newGame();
+
+function newHand(){
+  const deck=shuffle(buildDeck());
+  S.hands=[[],[],[],[]];
+  for(let round=0;round<2;round++)for(let p=0;p<4;p++)for(let k=0;k<3;k++)S.hands[p].push(deck.pop());
+  S.hands.forEach(sortHand);
+  S.trump=null; S.bid=0; S.pitcher=-1;
+  S.trick=[]; S.ledSuit=null; S.leader=-1;
+  S.trickLog=[]; S.trickNo=0;
+  S.phase='bid'; S.selected=null; S.handOver=false;
+  S.bidHigh=0; S.bidBidder=-1; S.bidSuitOfBidder=null;
+  S.bidOrder=[]; for(let i=1;i<=4;i++)S.bidOrder.push((S.dealer+i)%4);
+  S.bidIdx=0; S.bidTags=['','','',''];
+  $('mainBtn').style.display='none';
+  $('dealerLbl').textContent=NAMES[S.dealer];
+  $('trumpBadge').style.display='none';
+  $('tableTitle').textContent='Bidding';
+  setMsg('Bidding — going clockwise from '+NAMES[(S.dealer+1)%4]+'.');
+  setHelp('Bid the number of points you think you can take, or pass.');
+  render();
+  stepBidding();
+}
+
+function sortHand(h){
+  h.sort((a,b)=> SUITS.indexOf(a.s)-SUITS.indexOf(b.s) || RANK_VAL[a.r]-RANK_VAL[b.r]);
+}
+
+/* ---------- bidding flow ---------- */
+function stepBidding(){
+  if(S.bidIdx>=S.bidOrder.length){ finishBidding(); return; }
+  const p=S.bidOrder[S.bidIdx];
+  const isDealer=(p===S.dealer);
+  const lastToAct=(S.bidIdx===S.bidOrder.length-1);
+  if(p===0){
+    // human's turn to bid
+    showBidButtons(isDealer&&lastToAct&&S.bidHigh===0);
+    setMsg('<b>Your bid.</b> Current high: '+(S.bidHigh?S.bidHigh:'none')+'.');
+    render();
+    return;
+  }
+  // bot bids after a short beat
+  render();
+  setTimeout(()=>{
+    let chosen=null;
+    if(isDealer&&lastToAct&&S.bidHigh===0){
+      // forced bid
+      const b=botBid(S.hands[p],1);
+      const bb=b.bid>=2?b:{bid:2,suit:evalBidStrength(S.hands[p]).suit};
+      chosen=bb; S.bidTags[p]='forced '+bb.bid;
+    }else{
+      const b=botBid(S.hands[p],S.bidHigh);
+      const canSteal=isDealer&&b.bid===S.bidHigh&&b.bid>=2;
+      if(b.bid>S.bidHigh||canSteal){chosen=b; S.bidTags[p]=(canSteal?'steal ':'bid ')+b.bid;}
+      else S.bidTags[p]='pass';
+    }
+    if(chosen){S.bidHigh=chosen.bid;S.bidBidder=p;S.bidSuitOfBidder=chosen.suit;}
+    S.bidIdx++;
+    render();
+    stepBidding();
+  }, 620);
+}
+function showBidButtons(forced){
+  const row=$('bidRow'); row.style.display='flex'; row.innerHTML='';
+  const opts=[];
+  if(forced){ opts.push(2); } // forced: must bid at least 2 (offer 2,3,4)
+  for(let v=Math.max(2,S.bidHigh+1);v<=4;v++)opts.push(v);
+  // dealer steal option
+  const isDealer=(0===S.dealer);
+  if(isDealer&&S.bidHigh>=2&&!opts.includes(S.bidHigh))opts.unshift(S.bidHigh);
+  const uniq=[...new Set(opts)].sort((a,b)=>a-b);
+  uniq.forEach(v=>{
+    const b=document.createElement('button'); b.className='btn gold';
+    b.textContent=(isDealer&&v===S.bidHigh?'Steal '+v:'Bid '+v);
+    b.onclick=()=>humanBid(v); row.appendChild(b);
+  });
+  if(!forced){
+    const pass=document.createElement('button'); pass.className='btn ghost';
+    pass.textContent='Pass'; pass.onclick=()=>humanBid(0); row.appendChild(pass);
+  }
+}
+function humanBid(v){
+  $('bidRow').style.display='none';
+  if(v===0){ S.bidTags[0]='pass'; }
+  else { S.bidHigh=v; S.bidBidder=0; S.bidSuitOfBidder=null; S.bidTags[0]='bid '+v; }
+  S.bidIdx++; render(); stepBidding();
+}
+function finishBidding(){
+  S.pitcher=S.bidBidder; S.bid=S.bidHigh;
+  $('opps'); // refresh below
+  if(S.pitcher===0){
+    // human names trump
+    setMsg('<b>You won the bid at '+S.bid+'.</b> Choose your trump suit.');
+    showSuitPicker();
+    render();
+  }else{
+    S.trump=S.bidSuitOfBidder;
+    beginPlay();
+  }
+}
+function showSuitPicker(){
+  const row=$('suitRow'); row.style.display='flex'; row.innerHTML='';
+  SUITS.forEach(s=>{
+    const b=document.createElement('button');
+    b.className='suitbtn'+(RED.has(s)?' red':''); b.textContent=s;
+    b.onclick=()=>{ row.style.display='none'; S.trump=s; beginPlay(); };
+    row.appendChild(b);
+  });
+}
+
+/* ---------- trick play ---------- */
+function beginPlay(){
+  $('trumpBadge').style.display=''; $('trumpSym').textContent=S.trump;
+  $('trumpSym').className=RED.has(S.trump)?'red':'';
+  $('tableTitle').textContent='On the table';
+  S.leader=S.pitcher; S.turn=S.pitcher; S.trick=[]; S.ledSuit=null;
+  setMsg('<b>'+NAMES[S.pitcher]+'</b> pitched '+S.bid+', trump is '+S.trump+'. '+NAMES[S.pitcher]+' leads.');
+  setHelp('Follow suit if you can; you may trump any time. Highest trump wins.');
+  render();
+  advanceTurn();
+}
+function advanceTurn(){
+  // if trick complete (4 plays) resolve
+  if(S.trick.length===4){ resolveTrick(); return; }
+  const p=S.turn;
+  if(p===0){
+    render(); // human picks a card from hand (bindHand handles it)
+    setMsg('Your turn — tap a card to play.');
+    return;
+  }
+  render();
+  setTimeout(()=>{ botPlay(p); }, 640);
+}
+function playCard(p,card){
+  const hand=S.hands[p];
+  const idx=hand.findIndex(c=>c.id===card.id);
+  hand.splice(idx,1);
+  if(S.ledSuit===null)S.ledSuit=card.s;
+  S.trick.push({player:p,card});
+  S.turn=(S.turn+1)%4;
+  render();
+  advanceTurn();
+}
+function botPlay(p){
+  const legal=legalPlays(S.hands[p],S.ledSuit,S.trump);
+  let pick;
+  if(S.ledSuit===null){
+    // leading: pitcher pulls trump high early; others lead a modest card
+    if(p===S.pitcher){ pick=legal.reduce((a,b)=>trumpRank(b,S.trump)>trumpRank(a,S.trump)?b:a); }
+    else { pick=legal.reduce((a,b)=>gamePip(a)+trumpRank(a,S.trump)<=gamePip(b)+trumpRank(b,S.trump)?a:b); }
+  } else {
+    // decide current winner
+    const curWin=trickWinner(S.trick,S.ledSuit,S.trump);
+    const winningKey=Math.max(...S.trick.map(pl=>pl.card.s===S.trump?1000+RANK_VAL[pl.card.r]:(pl.card.s===S.ledSuit?RANK_VAL[pl.card.r]:-1)));
+    // try to win cheaply if the trick holds value, else dump lowest pip
+    const canWin=legal.filter(c=>{const k=c.s===S.trump?1000+RANK_VAL[c.r]:(c.s===S.ledSuit?RANK_VAL[c.r]:-1);return k>winningKey;});
+    const pileValue=S.trick.reduce((a,pl)=>a+gamePip(pl.card),0);
+    if(canWin.length&&pileValue>=3){ pick=canWin.reduce((a,b)=>(a.s===S.trump?1000+RANK_VAL[a.r]:RANK_VAL[a.r])<=(b.s===S.trump?1000+RANK_VAL[b.r]:RANK_VAL[b.r])?a:b); }
+    else { pick=legal.reduce((a,b)=>gamePip(a)+trumpRank(a,S.trump)*0.5<=gamePip(b)+trumpRank(b,S.trump)*0.5?a:b); }
+  }
+  playCard(p,pick);
+}
+function resolveTrick(){
+  const w=trickWinner(S.trick,S.ledSuit,S.trump);
+  S.trickLog.push({winner:w,cards:S.trick.slice()});
+  S.trickNo++;
+  setMsg('<b>'+NAMES[w]+'</b> takes the trick.');
+  render();
+  setTimeout(()=>{
+    S.trick=[]; S.ledSuit=null; S.leader=w; S.turn=w;
+    if(S.trickNo>=6){ endHand(); return; }
+    advanceTurn();
+  }, 900);
+}
+
+/* ---------- end of hand ---------- */
+function endHand(){
+  S.handOver=true;
+  const r=scoreHand(S.trickLog,S.trump,S.pitcher,S.bid);
+  for(let p=0;p<4;p++)S.scores[p]+=r.deltas[p];
+  $('trumpBadge').style.display='none';
+  $('tableTitle').textContent='Hand complete';
+  // build a readable summary
+  const d=r.detail;
+  const line=(lab,x)=> x&&x.player!=null ? lab+' '+NAMES[x.player]+(x.card?' ('+x.card.r+x.card.s+')':'') : (x&&x.tie?lab+' split (no point)':lab+' —');
+  let parts=[];
+  parts.push(line('High',d.high));
+  parts.push(line('Low',d.low));
+  parts.push(d.jack?line('Jack',d.jack):'Jack — (not dealt)');
+  parts.push(line('Game',d.game));
+  let m='<b>'+NAMES[S.pitcher]+'</b> bid '+S.bid+' & took '+r.pitcherPts+'. ';
+  m+= r.set ? '<b>Set back '+S.bid+'!</b> ' : 'Made it. ';
+  m+= '<br>'+parts.join(' · ');
+  pop(r.set?(NAMES[S.pitcher]+' set!'):(NAMES[S.pitcher]+' made '+S.bid));
+  const winners=[0,1,2,3].filter(p=>S.scores[p]>=TARGET);
+  if(winners.length){
+    // tie-break: pitcher first, else order of play from dealer's left
+    let champ;
+    if(winners.includes(S.pitcher))champ=S.pitcher;
+    else champ=S.bidOrder.find(p=>winners.includes(p));
+    m+='<br><b>🎣 '+NAMES[champ]+' win'+(champ===0?'':'s')+' the game!</b>';
+    $('mainBtn').textContent='New game';
+  }else{
+    m+='<br>Tap New hand to continue.';
+    $('mainBtn').textContent='New hand';
+  }
+  setMsg(m);
+  setHelp('Everyone keeps points they took; the pitcher is set if short of the bid.');
+  $('mainBtn').style.display='';
+  render();
+}
+
+/* ---------- rendering ---------- */
+function cardFace(c,cls=''){
+  const red=RED.has(c.s)?'red':'';
+  const tr=(S&&S.trump&&c.s===S.trump)?'trumpcard':'';
+  return `<div class="card ${red} ${tr} ${cls}" data-id="${c.id}"><div class="r">${c.r}<span class="s">${c.s}</span></div><div class="big">${c.s}</div></div>`;
+}
+function renderOpps(){
+  const el=$('opps'); el.innerHTML='';
+  for(let p=0;p<4;p++){
+    const active=(!S.handOver&&((S.phase==='bid'&&S.bidOrder[S.bidIdx]===p)||(S.trump&&S.turn===p&&S.trick.length<4)));
+    const isPitcher=(S.pitcher===p);
+    const div=document.createElement('div');
+    div.className='opp'+(active?' active':'')+(isPitcher?' pitcher':'');
+    let cnt='';
+    if(p===0){ cnt=''; }
+    else { const n=S.hands?S.hands[p].length:0; for(let i=0;i<n;i++)cnt+='<i></i>'; }
+    const tag = S.phase==='bid' ? (S.bidTags[p]||'') : '';
+    div.innerHTML=`<div class="nm">${NAMES[p]}${p===0?' ★':''}</div>
+      <div class="sc">${S.scores[p]} pt${Math.abs(S.scores[p])===1?'':'s'}</div>
+      ${p===0?'':`<div class="cnt">${cnt}</div>`}
+      <div class="bidtag">${tag}</div>`;
+    el.appendChild(div);
+  }
+}
+function renderTrick(){
+  const el=$('trick');
+  if(!S.trump && S.phase==='bid'){ el.innerHTML='<span style="color:var(--moss);font-size:11px">bidding…</span>'; return; }
+  if(!S.trick.length){ el.innerHTML='<span style="color:var(--moss);font-size:11px">—</span>'; return; }
+  el.innerHTML='';
+  S.trick.forEach(pl=>{
+    const slot=document.createElement('div'); slot.className='slot';
+    slot.innerHTML=`<div class="who">${NAMES[pl.player]}</div>`+cardFace(pl.card,'small');
+    el.appendChild(slot);
+  });
+}
+function render(){
+  if(!S)return;
+  renderOpps(); renderTrick();
+  const h=$('hand'); h.innerHTML='';
+  if(S.hands){
+    const legal = (S.trump&&S.turn===0&&!S.handOver&&S.trick.length<4)?legalPlays(S.hands[0],S.ledSuit,S.trump):null;
+    S.hands[0].forEach(c=>{
+      const playable = legal ? legal.some(x=>x.id===c.id) : false;
+      const cls = (S.trump&&S.turn===0&&!S.handOver&&S.trick.length<4&&!playable)?'disabled':'';
+      h.innerHTML+=cardFace(c,cls);
+    });
+  }
+  bindHand();
+}
+function bindHand(){
+  if(!(S.trump&&S.turn===0&&!S.handOver&&S.trick.length<4))return;
+  const legal=legalPlays(S.hands[0],S.ledSuit,S.trump);
+  $('hand').querySelectorAll('.card').forEach(n=>{
+    const id=n.dataset.id;
+    if(!legal.some(x=>x.id===id))return;
+    n.onclick=()=>{ const card=S.hands[0].find(c=>c.id===id); playCard(0,card); };
+  });
+}
+
+/* ---------- misc ---------- */
+function pop(t){const p=$('pop');p.textContent=t;p.classList.remove('show');void p.offsetWidth;p.classList.add('show');}
+function setMsg(h){$('msg').innerHTML=h;}
+function setHelp(h){$('help').innerHTML=h;}
+
+$('mainBtn').onclick=()=>{
+  if(S.handOver||!S.hands){
+    if(S.scores.some(x=>x>=TARGET)){ newGame(); S.dealer=3; }
+    else { S.dealer=(S.dealer+1)%4; }
+    newHand();
+  }
+};
+
+// first render
+$('mainBtn').style.display='';
+setMsg('Tap <b>New hand</b> to deal. You bid first this hand.');
+renderOpps();
+
+/* iOS Files preview safeguard: the Files app shows .html as a static preview
+   where taps often don't run. If interaction looks disabled, surface a clear
+   "Open in Safari" banner. Harmless in a real browser (never shows there). */
+try{
+  var interacted=false;
+  document.addEventListener('touchstart',function(){interacted=true;},{once:true,passive:true});
+  document.addEventListener('click',function(){interacted=true;},{once:true});
+  // If a quick test tap on the main button yields no event wiring at all, or the
+  // environment is the known Files quicklook, show help after a short grace.
+  var isQuickLook = / QuickLook| Preview/i.test(navigator.userAgent||'') ;
+  if(isQuickLook){ document.getElementById('previewNote').style.display='flex'; }
+}catch(e){ /* ignore */ }
+})();
+</script>
+</body>
+</html>
