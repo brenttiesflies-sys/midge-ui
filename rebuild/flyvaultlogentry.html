@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>FlyVault · The Log</title>
+<style>
+  :root{
+    --ink:#221d14; --ink-soft:#5e5343; --paper:#f4efe3;
+    --gold:#c8943f; --gold-deep:#a9762b; --oxblood:#7c3a2d;
+    --green:#3f6b4a; --dark:#1a140d; --hair:#ddd6c6;
+    --bg:#2b2a24; --card:#fbf8f0; --line:#cabda3;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{background:var(--bg);color:var(--ink);
+    font-family:'Iowan Old Style','Palatino Linotype','Georgia',serif}
+  body{max-width:480px;margin:0 auto;position:relative;overflow-x:hidden;min-height:100vh;padding-bottom:96px}
+  .util{font-family:-apple-system,'Segoe UI',sans-serif}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  .ambient{position:fixed;inset:0;z-index:0;
+    background:radial-gradient(120% 80% at 50% -10%, #3a382f 0%, #26251f 55%, #1c1b16 100%)}
+  .wrap{position:relative;z-index:5}
+
+  header{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:10px;
+    padding:11px 16px;background:rgba(26,20,13,.94);backdrop-filter:blur(8px);border-bottom:1px solid #000}
+  header .back{background:none;border:0;color:var(--paper);font-size:22px;cursor:pointer;line-height:1;padding:2px 6px}
+  header .ht{flex:1;font-size:17px;color:var(--paper);letter-spacing:.3px}
+  header .ht span{color:var(--gold)}
+  header .save-state{font-family:-apple-system,sans-serif;font-size:11px;color:var(--green);
+    display:flex;align-items:center;gap:5px}
+  header .save-state .dot{width:7px;height:7px;border-radius:50%;background:var(--green);
+    box-shadow:0 0 0 0 rgba(63,107,74,.6);animation:pulse 2.4s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(63,107,74,.55)}70%{box-shadow:0 0 0 7px rgba(63,107,74,0)}100%{box-shadow:0 0 0 0 rgba(63,107,74,0)}}
+
+  /* the masthead — a logbook page header, not a hero stat */
+  .masthead{margin:14px 14px 0;background:var(--card);border:1px solid var(--hair);border-radius:14px;
+    overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.32)}
+  .masthead .strip{background:var(--dark);padding:9px 16px;display:flex;align-items:center;justify-content:space-between}
+  .masthead .strip .lbl{font-family:-apple-system,sans-serif;font-size:10px;font-weight:800;letter-spacing:3px;
+    text-transform:uppercase;color:var(--gold)}
+  .masthead .strip .pg{font-family:-apple-system,sans-serif;font-size:10px;color:#9a8e76;letter-spacing:1px}
+  .masthead h1{font-size:23px;padding:13px 16px 3px;line-height:1.05}
+  .masthead .sub{font-family:-apple-system,sans-serif;font-size:12.5px;color:var(--ink-soft);padding:0 16px 14px}
+
+  /* the autofill banner — the headline win */
+  .autofill{margin:13px 14px 0;background:linear-gradient(135deg,#2c2418,#1a140d);
+    border:1px solid #3a3026;border-radius:14px;padding:15px 16px;position:relative;overflow:hidden}
+  .autofill::before{content:'';position:absolute;right:-30px;top:-30px;width:120px;height:120px;
+    border-radius:50%;background:radial-gradient(circle,rgba(200,148,63,.22),transparent 70%)}
+  .autofill .row{display:flex;align-items:center;gap:11px;position:relative}
+  .autofill .spark{font-size:20px}
+  .autofill .at{flex:1;font-family:-apple-system,sans-serif}
+  .autofill .at .t{font-size:14px;font-weight:700;color:var(--paper)}
+  .autofill .at .s{font-size:11.5px;color:#bdb094;margin-top:2px;line-height:1.35}
+  .autofill button{font-family:-apple-system,sans-serif;font-size:12.5px;font-weight:800;background:var(--gold);
+    border:0;border-radius:9px;padding:9px 13px;cursor:pointer;color:var(--dark);white-space:nowrap}
+  .autofill .pulled{display:none;margin-top:13px;position:relative}
+  .autofill.done .pulled{display:block}
+  .autofill.done button{background:#2c2418;color:var(--green);pointer-events:none}
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chips .c{font-family:-apple-system,sans-serif;font-size:11.5px;background:rgba(244,239,227,.07);
+    border:1px solid #3a3026;border-radius:8px;padding:6px 10px;color:#e7dfce;display:flex;gap:6px;align-items:center}
+  .chips .c b{color:var(--gold);font-weight:700}
+  .chips .c .ico{opacity:.8}
+
+  /* form sections — the paper boxes, digitized */
+  .section{margin:13px 14px 0;background:var(--card);border:1px solid var(--hair);border-radius:14px;overflow:hidden}
+  .section > .head{display:flex;align-items:center;gap:8px;padding:11px 15px 10px;border-bottom:1px solid var(--hair);
+    background:linear-gradient(to bottom,#f4efe3,#efe8d8)}
+  .section > .head .ttl{font-family:-apple-system,sans-serif;font-size:11px;font-weight:800;letter-spacing:1.8px;
+    text-transform:uppercase;color:var(--ink-soft)}
+  .section > .head .auto{margin-left:auto;font-family:-apple-system,sans-serif;font-size:9.5px;font-weight:800;
+    letter-spacing:.6px;text-transform:uppercase;color:var(--gold-deep);background:rgba(200,148,63,.15);
+    padding:3px 8px;border-radius:5px}
+  .section .body{padding:14px 15px}
+
+  /* field rows */
+  .field{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #ece4d3}
+  .field:last-child{border-bottom:0;padding-bottom:0}
+  .field:first-child{padding-top:0}
+  .field .k{flex:0 0 96px;font-family:-apple-system,sans-serif;font-size:12px;font-weight:700;
+    letter-spacing:.4px;text-transform:uppercase;color:var(--ink-soft)}
+  .field .v{flex:1;font-size:15.5px;color:var(--ink)}
+  .field .v.filled{color:var(--ink)}
+  .field .v .ph{color:#b3a888}
+  .field .v.auto-val{color:var(--gold-deep);font-weight:600}
+  .field .edit{font-family:-apple-system,sans-serif;font-size:11px;color:var(--gold-deep);font-weight:700;cursor:pointer}
+
+  /* pill toggles for weather / body of water / clarity */
+  .pillrow{display:flex;flex-wrap:wrap;gap:8px}
+  .pill{font-family:-apple-system,sans-serif;font-size:13px;border:1px solid var(--hair);background:#fff;
+    border-radius:999px;padding:8px 13px;cursor:pointer;color:var(--ink-soft);display:flex;align-items:center;gap:6px;
+    transition:all .12s}
+  .pill .g{font-size:15px;line-height:1}
+  .pill.on{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+  .pill.on.gold{background:var(--gold-deep);border-color:var(--gold-deep);color:#fff}
+
+  /* moon phase selector */
+  .moonrow{display:flex;justify-content:space-between;gap:6px}
+  .moon{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;padding:6px 2px;
+    border-radius:10px;border:1px solid transparent}
+  .moon.on{border-color:var(--gold);background:rgba(200,148,63,.1)}
+  .moon .disc{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--ink-soft);position:relative;overflow:hidden;background:#fff}
+  .moon .disc i{position:absolute;inset:0;background:var(--ink)}
+  .moon .disc.new i{inset:0}
+  .moon .disc.first i{left:50%}
+  .moon .disc.full i{display:none}
+  .moon .disc.full{background:#fff}
+  .moon .disc.wan i{right:50%;left:auto;width:50%}
+  .moon .disc.cres i{width:62%;left:auto;right:0;border-radius:50%}
+  .moon .lbl{font-family:-apple-system,sans-serif;font-size:9px;color:var(--ink-soft);letter-spacing:.3px;text-align:center}
+  .moon.on .lbl{color:var(--gold-deep);font-weight:700}
+  .moon .auto-tag{font-family:-apple-system,sans-serif;font-size:8px;color:var(--gold-deep);font-weight:800}
+
+  /* water visibility slider */
+  .viswrap{padding-top:4px}
+  .vistrack{position:relative;height:8px;border-radius:5px;margin:22px 6px 8px;
+    background:linear-gradient(to right,#6b5a3a,#9a8a5a,#c9bd9a,#e8e2cf)}
+  .vistrack .knob{position:absolute;top:50%;width:20px;height:20px;border-radius:50%;background:var(--paper);
+    border:3px solid var(--gold-deep);transform:translate(-50%,-50%);cursor:grab;box-shadow:0 2px 5px rgba(0,0,0,.25)}
+  .vislabels{display:flex;justify-content:space-between;font-family:-apple-system,sans-serif;
+    font-size:11px;color:var(--ink-soft);padding:0 2px}
+  .vislabels b{color:var(--ink);font-weight:700}
+
+  /* catch list — the day's catch */
+  .catch{background:#fff;border:1px solid var(--hair);border-radius:12px;padding:12px 13px;margin-bottom:10px;position:relative}
+  .catch .top{display:flex;align-items:flex-start;gap:11px}
+  .catch .thumb{flex:0 0 50px;height:50px;border-radius:9px;background-size:cover;background-position:center;
+    border:1px solid var(--hair);position:relative;display:flex;align-items:center;justify-content:center}
+  .catch .thumb .cam{font-size:18px;opacity:.5}
+  .catch .meta{flex:1}
+  .catch .meta .sp{font-size:16px;font-weight:700;display:flex;align-items:center;gap:7px}
+  .catch .meta .sp .badge{font-family:-apple-system,sans-serif;font-size:9.5px;font-weight:800;letter-spacing:.4px;
+    text-transform:uppercase;background:rgba(124,58,45,.12);color:var(--oxblood);padding:2px 7px;border-radius:5px}
+  .catch .meta .dims{font-family:-apple-system,sans-serif;font-size:12.5px;color:var(--ink-soft);margin-top:3px}
+  .catch .meta .dims b{color:var(--ink)}
+  .catch .time{font-family:-apple-system,sans-serif;font-size:11.5px;color:var(--ink-soft);text-align:right;flex:0 0 auto}
+
+  /* the fly tag — the fly-fishing win: pattern + color as one object linked to vault */
+  .flytag{margin-top:10px;display:flex;align-items:center;gap:10px;background:linear-gradient(to right,#f6efe0,#f1e8d4);
+    border:1px solid #e3d8bd;border-radius:10px;padding:9px 11px;cursor:pointer}
+  .flytag .swatch{flex:0 0 26px;height:26px;border-radius:6px;border:1.5px solid rgba(0,0,0,.12)}
+  .flytag .ft{flex:1;font-family:-apple-system,sans-serif}
+  .flytag .ft .nm{font-size:13.5px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px}
+  .flytag .ft .nm .vault{font-size:9px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;
+    color:var(--gold-deep);background:rgba(200,148,63,.16);padding:2px 6px;border-radius:4px}
+  .flytag .ft .det{font-size:11.5px;color:var(--ink-soft);margin-top:2px}
+  .flytag .chev{color:var(--ink-soft);font-size:18px}
+
+  .addcatch{width:100%;font-family:-apple-system,sans-serif;font-size:14px;font-weight:700;
+    background:var(--ink);border:0;border-radius:11px;padding:13px;cursor:pointer;color:var(--paper);
+    display:flex;align-items:center;justify-content:center;gap:8px;margin-top:2px}
+  .addcatch .plus{font-size:18px;line-height:1}
+
+  /* notes */
+  .notes-area{width:100%;min-height:74px;font-family:'Iowan Old Style',Georgia,serif;font-size:15px;
+    color:var(--ink);background:#fff;border:1px solid var(--hair);border-radius:10px;padding:12px 13px;
+    line-height:1.5;resize:none;outline:none}
+  .notes-area::placeholder{color:#b3a888}
+
+  /* MIDGE memory — the payoff card */
+  .midge{margin:13px 14px 0;background:linear-gradient(135deg,#23323a,#1a232a);border:1px solid #2e424c;
+    border-radius:16px;padding:16px;position:relative;overflow:hidden}
+  .midge::after{content:'';position:absolute;left:-40px;bottom:-50px;width:160px;height:160px;border-radius:50%;
+    background:radial-gradient(circle,rgba(63,107,74,.28),transparent 70%)}
+  .midge .mh{display:flex;align-items:center;gap:9px;margin-bottom:11px;position:relative}
+  .midge .mh .orb{flex:0 0 30px;height:30px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#d8b15a,#a9762b);box-shadow:0 0 14px rgba(200,148,63,.5)}
+  .midge .mh .mt{font-family:-apple-system,sans-serif}
+  .midge .mh .mt .who{font-size:13px;font-weight:800;color:var(--paper);letter-spacing:.3px}
+  .midge .mh .mt .ctx{font-size:10.5px;color:#8fa5ad;letter-spacing:.4px;text-transform:uppercase}
+  .midge .mbody{position:relative;font-size:14.5px;line-height:1.5;color:#e4ebed}
+  .midge .mbody b{color:var(--gold)}
+  .midge .recall{margin-top:12px;display:flex;flex-direction:column;gap:8px;position:relative}
+  .midge .rc{display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.22);border:1px solid #2e424c;
+    border-radius:10px;padding:9px 11px;font-family:-apple-system,sans-serif}
+  .midge .rc .d{flex:0 0 auto;font-size:11px;font-weight:800;color:var(--green);background:rgba(63,107,74,.18);
+    padding:3px 7px;border-radius:5px}
+  .midge .rc .x{flex:1;font-size:12.5px;color:#cdd6d8;line-height:1.35}
+  .midge .rc .x b{color:#fff}
+  .midge .mfoot{margin-top:12px;position:relative;font-family:-apple-system,sans-serif;font-size:11.5px;color:#7e949c}
+
+  /* sticky save bar */
+  .savebar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:50;
+    display:flex;gap:10px;padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+    background:linear-gradient(to top,#1a140d 70%,rgba(26,20,13,0));}
+  .savebar button{font-family:-apple-system,sans-serif;font-weight:800;border-radius:13px;cursor:pointer;border:0}
+  .savebar .primary{flex:1;font-size:15px;background:var(--gold);color:var(--dark);padding:15px}
+  .savebar .ghost{font-size:14px;background:rgba(244,239,227,.1);color:var(--paper);
+    border:1px solid #3a3026;padding:15px 16px}
+
+  /* bottom sheet */
+  #sheet{position:fixed;inset:0;z-index:90;display:none;align-items:flex-end;justify-content:center;background:rgba(10,8,5,.55)}
+  #sheet.open{display:flex}
+  #sheet-box{width:100%;max-width:480px;background:var(--paper);border-radius:20px 20px 0 0;padding:8px 0 26px;
+    animation:rise .22s ease;max-height:88vh;overflow-y:auto}
+  @keyframes rise{from{transform:translateY(40px);opacity:.6}to{transform:translateY(0);opacity:1}}
+  #sheet-box .grab{width:42px;height:5px;border-radius:3px;background:var(--hair);margin:6px auto 14px}
+  #sheet-box .sc{padding:0 20px}
+  #sheet-box .sf{font-size:28px;margin-bottom:6px}
+  #sheet-box h3{font-size:20px;margin-bottom:7px}
+  #sheet-box .stext{font-size:14.5px;line-height:1.5;color:var(--ink);margin-bottom:13px}
+  #sheet-box .why{font-family:-apple-system,sans-serif;font-size:12.5px;line-height:1.5;color:var(--ink-soft);
+    background:rgba(200,148,63,.12);border-left:3px solid var(--gold);border-radius:8px;padding:11px 13px;margin-bottom:16px}
+  #sheet-box .why b{color:var(--gold-deep)}
+  #sheet-box .sclose{width:100%;font-family:-apple-system,sans-serif;font-size:14px;font-weight:700;
+    background:var(--dark);border:0;border-radius:12px;padding:13px;cursor:pointer;color:var(--paper)}
+
+  .helpdot{flex:0 0 auto;width:18px;height:18px;border-radius:50%;border:1px solid var(--ink-soft);
+    color:var(--ink-soft);font-family:-apple-system,sans-serif;font-size:11px;font-weight:800;cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;background:transparent}
+
+  footer{padding:22px 16px 10px;text-align:center;font-family:-apple-system,sans-serif;font-size:11px;color:#7d7460}
+</style>
+</head>
+<body>
+  <div class="ambient"></div>
+  <div class="wrap">
+    <header>
+      <button class="back">‹</button>
+      <div class="ht">Fly<span>Vault</span> · New Log Entry</div>
+      <div class="save-state"><span class="dot"></span>Saved</div>
+    </header>
+
+    <!-- masthead -->
+    <div class="masthead">
+      <div class="strip"><span class="lbl">Logbook Entry</span><span class="pg" id="pg">Entry No. 248</span></div>
+      <h1 id="trip-title">Untitled Morning</h1>
+      <div class="sub" id="trip-sub">Tap any field to name this trip · everything autosaves as you go</div>
+    </div>
+
+    <!-- THE WIN #1 — one-tap autofill -->
+    <div class="autofill" id="autofill">
+      <div class="row">
+        <span class="spark">✨</span>
+        <div class="at">
+          <div class="t">Pull today's conditions</div>
+          <div class="s">Flow, water temp, weather, pressure, moon &amp; light — straight from your spot. No typing.</div>
+        </div>
+        <button onclick="runAutofill()">Auto-fill</button>
+      </div>
+      <div class="pulled" id="pulled">
+        <div class="chips">
+          <span class="c"><span class="ico">🌊</span>Flow <b>142 cfs</b></span>
+          <span class="c"><span class="ico">🌡️</span>Water <b>54°F</b></span>
+          <span class="c"><span class="ico">💨</span>Wind <b>WNW 6</b></span>
+          <span class="c"><span class="ico">📊</span>Baro <b>30.1 ↑</b></span>
+          <span class="c"><span class="ico">⛅</span>Partly cloudy</span>
+          <span class="c"><span class="ico">🌙</span>Waning gibbous</span>
+          <span class="c"><span class="ico">💧</span>Clarity <b>~2 ft</b></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- trip basics -->
+    <div class="section">
+      <div class="head"><span class="ttl">Where &amp; When</span><span class="auto" id="loc-auto" style="display:none">GPS</span></div>
+      <div class="body">
+        <div class="field"><span class="k">Date</span><span class="v auto-val" id="f-date">—</span></div>
+        <div class="field"><span class="k">Time in</span><span class="v auto-val">6:14 AM</span><span class="edit">edit</span></div>
+        <div class="field"><span class="k">Water</span><span class="v" id="f-water" onclick="openSheet('water')"><span class="ph" style="color:#b3a888">Tap to set location</span></span></div>
+        <div class="field"><span class="k">Coordinates</span><span class="v auto-val" id="f-coord">—</span></div>
+        <div class="field"><span class="k">Partners</span><span class="v" onclick="openSheet('partners')"><span class="ph" style="color:#b3a888">Add who's with you</span></span></div>
+      </div>
+    </div>
+
+    <!-- body of water -->
+    <div class="section">
+      <div class="head"><span class="ttl">Body of Water</span></div>
+      <div class="body">
+        <div class="pillrow" id="bow">
+          <button class="pill" onclick="togglePill(this)"><span class="g">🏞️</span>River</button>
+          <button class="pill" onclick="togglePill(this)"><span class="g">🌊</span>Lake</button>
+          <button class="pill" onclick="togglePill(this)"><span class="g">〰️</span>Creek</button>
+          <button class="pill" onclick="togglePill(this)"><span class="g">🛶</span>Tailwater</button>
+          <button class="pill" onclick="togglePill(this)"><span class="g">🏔️</span>Spring</button>
+          <button class="pill" onclick="togglePill(this)"><span class="g">🌅</span>Pond</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- weather -->
+    <div class="section">
+      <div class="head"><span class="ttl">Weather</span><span class="auto">Auto-filled</span></div>
+      <div class="body">
+        <div class="pillrow" id="wx">
+          <button class="pill" onclick="togglePill(this)"><span class="g">☀️</span>Sun</button>
+          <button class="pill on gold" onclick="togglePill(this)"><span class="g">⛅</span>Partly</button>
+          <button class="pill" onclick="togglePill(this)"><span class="g">☁️</span>Overcast</button>
+          <button class="pill" onclick="togglePill(this)"><span class="g">🌧️</span>Rain</button>
+          <button class="pill" onclick="togglePill(this)"><span class="g">❄️</span>Snow</button>
+        </div>
+        <div class="field" style="margin-top:12px"><span class="k">Wind</span><span class="v auto-val">WNW · 6 mph</span></div>
+        <div class="field"><span class="k">Barometer</span><span class="v auto-val">30.1 in · rising</span></div>
+        <div class="field"><span class="k">Air temp</span><span class="v auto-val">48°F</span></div>
+      </div>
+    </div>
+
+    <!-- water conditions -->
+    <div class="section">
+      <div class="head"><span class="ttl">Water</span><span class="auto">Auto-filled</span></div>
+      <div class="body">
+        <div class="field"><span class="k">Temp</span><span class="v auto-val">54°F</span></div>
+        <div class="field"><span class="k">Flow</span><span class="v auto-val">142 cfs · steady</span></div>
+        <div class="field" style="border-bottom:0;padding-bottom:4px">
+          <span class="k">Clarity</span><span class="v" style="font-family:-apple-system,sans-serif;font-size:12.5px;color:var(--ink-soft)">drag to set ↓</span>
+        </div>
+        <div class="viswrap">
+          <div class="vistrack" id="vistrack" onclick="moveKnob(event)"><div class="knob" id="visknob" style="left:62%"></div></div>
+          <div class="vislabels"><span><b>Clear</b></span><span>2</span><span>3</span><span>4</span><span>Misty</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- moon -->
+    <div class="section">
+      <div class="head"><span class="ttl">Moon Phase</span><span class="auto">Auto-filled</span></div>
+      <div class="body">
+        <div class="moonrow">
+          <div class="moon" onclick="pickMoon(this)"><div class="disc new"><i></i></div><div class="lbl">New</div></div>
+          <div class="moon" onclick="pickMoon(this)"><div class="disc first"><i></i></div><div class="lbl">First Qtr</div></div>
+          <div class="moon" onclick="pickMoon(this)"><div class="disc full"><i></i></div><div class="lbl">Full</div></div>
+          <div class="moon on" onclick="pickMoon(this)"><div class="disc wan"><i></i></div><div class="lbl">Waning</div><span class="auto-tag">● AUTO</span></div>
+          <div class="moon" onclick="pickMoon(this)"><div class="disc cres"><i></i></div><div class="lbl">Crescent</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- THE DAY'S CATCH -->
+    <div class="section">
+      <div class="head"><span class="ttl">The Day's Catch</span><span class="auto" style="background:rgba(124,58,45,.12);color:var(--oxblood)">3 fish</span></div>
+      <div class="body">
+
+        <!-- catch with a fly tag — the fly-fishing-specific win -->
+        <div class="catch">
+          <div class="top">
+            <div class="thumb" style="background-image:linear-gradient(135deg,#4a6b6e,#22332f)"></div>
+            <div class="meta">
+              <div class="sp">Brown Trout <span class="badge">Released</span></div>
+              <div class="dims"><b>16"</b> · est. 1.4 lb · riffle seam</div>
+            </div>
+            <div class="time">6:48 AM</div>
+          </div>
+          <div class="flytag" onclick="openSheet('fly')">
+            <div class="swatch" style="background:#6b4a2a"></div>
+            <div class="ft">
+              <div class="nm">Pheasant Tail Nymph <span class="vault">in vault</span></div>
+              <div class="det">Size 16 · natural / copper rib · dropper</div>
+            </div>
+            <div class="chev">›</div>
+          </div>
+        </div>
+
+        <!-- catch 2 -->
+        <div class="catch">
+          <div class="top">
+            <div class="thumb" style="background-image:linear-gradient(135deg,#6e5a3a,#2c2418)"></div>
+            <div class="meta">
+              <div class="sp">Brook Trout <span class="badge">Released</span></div>
+              <div class="dims"><b>9"</b> · plunge pool</div>
+            </div>
+            <div class="time">7:20 AM</div>
+          </div>
+          <div class="flytag" onclick="openSheet('fly')">
+            <div class="swatch" style="background:#caa24a"></div>
+            <div class="ft">
+              <div class="nm">Elk Hair Caddis <span class="vault">in vault</span></div>
+              <div class="det">Size 14 · tan · dry, dead drift</div>
+            </div>
+            <div class="chev">›</div>
+          </div>
+        </div>
+
+        <!-- catch 3 — photo capture -->
+        <div class="catch">
+          <div class="top">
+            <div class="thumb"><span class="cam">📷</span></div>
+            <div class="meta">
+              <div class="sp">Brown Trout <span class="badge">Released</span></div>
+              <div class="dims"><b>13"</b> · tap photo to ID &amp; measure</div>
+            </div>
+            <div class="time">8:05 AM</div>
+          </div>
+          <div class="flytag" onclick="openSheet('fly')">
+            <div class="swatch" style="background:#6b4a2a"></div>
+            <div class="ft">
+              <div class="nm">Pheasant Tail Nymph <span class="vault">in vault</span></div>
+              <div class="det">Size 16 · same as fish #1 — one tap to repeat</div>
+            </div>
+            <div class="chev">›</div>
+          </div>
+        </div>
+
+        <button class="addcatch" onclick="openSheet('addcatch')"><span class="plus">＋</span> Log a fish</button>
+      </div>
+    </div>
+
+    <!-- notes — the field half the apps forgot -->
+    <div class="section">
+      <div class="head"><span class="ttl">Notes</span></div>
+      <div class="body">
+        <textarea class="notes-area" placeholder="The stuff the grid can't hold — fish were stacked on the inside seam, took the dropper on the swing, dried up by 9 when the sun hit the water…"></textarea>
+      </div>
+    </div>
+
+    <!-- THE PAYOFF — MIDGE memory of this water -->
+    <div class="midge">
+      <div class="mh">
+        <div class="orb"></div>
+        <div class="mt"><div class="who">MIDGE</div><div class="ctx">Reading your history · this water</div></div>
+        <div class="helpdot" onclick="openSheet('midge')">?</div>
+      </div>
+      <div class="mbody">
+        You've logged this reach <b>7 times</b>. At <b>54° and ~140 cfs</b>, your best mornings here ran small nymphs on a dropper — and the bite has died by 9 every time the sun hits the water.
+      </div>
+      <div class="recall">
+        <div class="rc"><span class="d">Last yr</span><span class="x">Same week, same flow — <b>11 fish</b> on a size 16 Pheasant Tail before 9 AM.</span></div>
+        <div class="rc"><span class="d">Pattern</span><span class="x">Your top fly for this water+temp: <b>Pheasant Tail #16</b> (in your vault).</span></div>
+      </div>
+      <div class="mfoot">Private to you. This entry teaches MIDGE — it never goes to anyone else's log.</div>
+    </div>
+
+    <footer>FlyVault · The Log — entry prototype · all data illustrative</footer>
+  </div>
+
+  <!-- sticky save bar -->
+  <div class="savebar">
+    <button class="ghost" onclick="openSheet('saved')">Save draft</button>
+    <button class="primary" onclick="openSheet('logged')">Log this trip</button>
+  </div>
+
+  <!-- bottom sheet -->
+  <div id="sheet" onclick="if(event.target===this)closeSheet()">
+    <div id="sheet-box"><div class="grab"></div><div class="sc" id="sheet-content"></div></div>
+  </div>
+
+<script>
+/* ---------- interactions ---------- */
+function flashSaved(){
+  var s=document.querySelector('.save-state');
+  s.innerHTML='<span class="dot"></span>Saving…';
+  setTimeout(function(){ s.innerHTML='<span class="dot"></span>Saved'; }, 600);
+}
+
+function runAutofill(){
+  document.getElementById('autofill').classList.add('done');
+  document.querySelector('#autofill button').textContent='✓ Pulled';
+  // light up the auto-filled values
+  document.getElementById('f-date').textContent='Sat · June 27, 2026';
+  document.getElementById('f-coord').textContent='43.7891, -90.6043';
+  var la=document.getElementById('loc-auto'); if(la) la.style.display='inline-block';
+  flashSaved();
+}
+
+function togglePill(el){
+  var single = el.parentElement.id==='wx'; // weather is single-select
+  if(single){
+    [].forEach.call(el.parentElement.children,function(c){ c.classList.remove('on','gold'); });
+    el.classList.add('on','gold');
+  } else {
+    el.classList.toggle('on');
+  }
+  flashSaved();
+}
+
+function pickMoon(el){
+  [].forEach.call(el.parentElement.children,function(c){ c.classList.remove('on'); });
+  el.classList.add('on');
+  flashSaved();
+}
+
+function moveKnob(e){
+  var track=document.getElementById('vistrack');
+  var r=track.getBoundingClientRect();
+  var x=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));
+  document.getElementById('visknob').style.left=(x*100)+'%';
+  flashSaved();
+}
+
+/* ---------- bottom sheets ---------- */
+var SHEETS = {
+  fly:{f:"🪰",h:"Fly &amp; color, as one thing",
+    text:"Pick the pattern once, then tag size, color and how you fished it. The same fly in three colors is still one fly &mdash; not three junk entries clogging your stats.",
+    why:"<b>The complaint we kept seeing:</b> apps make you create a brand-new bait for every color combo, so nothing aggregates. Here a pattern links straight to its record in your vault, and color is an attribute &mdash; so MIDGE can finally tell you <i>natural</i> out-fishes <i>olive</i> on this water."},
+  midge:{f:"🧠",h:"How MIDGE reads your history",
+    text:"Every trip you log on a water builds a private record only you can see. Before you fish it again, MIDGE surfaces what actually worked &mdash; your flies, your flows, your best windows &mdash; instead of you scrolling back through a year of entries.",
+    why:"<b>The win anglers ask for by name:</b> &lsquo;what worked here last time.&rsquo; Paper can't do it and most apps bury it. This is the reasoning layer over your own cabinet &mdash; the reason to log at all."},
+  addcatch:{f:"🎣",h:"Log a fish",
+    text:"Snap a photo and MIDGE fills species, rough length and the time. You confirm, tag the fly, and you're back to fishing &mdash; the whole thing is a few taps, not a form.",
+    why:"<b>Why photo-first:</b> the loudest review complaint is fiddling with the phone on the water. One photo carries the date, time, GPS and conditions; you only touch what the camera can't see."},
+  water:{f:"📍",h:"Set the water",
+    text:"Drop your GPS spot or pick a named reach. MIDGE remembers it, so next time this same spot pre-loads its own flow gauge, hatch window and your past entries.",
+    why:"<b>Why it matters:</b> wade anglers cover ground &mdash; &lsquo;where I am&rsquo; is a real data point. Spots are reusable, named, and tied to a live gauge."},
+  partners:{f:"🤝",h:"Fishing partners",
+    text:"Tag who's with you. If they're FlyVault members, the trip shows in both logs &mdash; one entry, shared.",
+    why:"<b>Small thing, real ask:</b> people fish together and want the shared day in both records without double entry."},
+  saved:{f:"💾",h:"Draft saved",
+    text:"Everything's already saved &mdash; this entry has been autosaving since you opened it. Close the app, lose signal, hit back: it'll be here.",
+    why:"<b>The #1 review complaint, fixed:</b> &lsquo;the back button erased my whole entry.&rsquo; Nothing here is ever lost to a stray tap."},
+  logged:{f:"✅",h:"Trip logged",
+    text:"Entry No. 248 is in your logbook. MIDGE just folded it into what it knows about this water &mdash; next time you fish here, today becomes part of the answer.",
+    why:"<b>The loop closes:</b> you logged it, and it immediately makes the next trip smarter. That's the difference between a diary and a vault."}
+};
+function openSheet(key){
+  var s=SHEETS[key];
+  var box=document.getElementById('sheet-content');
+  if(s){
+    box.innerHTML='<div class="sf">'+s.f+'</div><h3>'+s.h+'</h3>'+
+      '<div class="stext">'+s.text+'</div><div class="why">'+s.why+'</div>'+
+      '<button class="sclose" onclick="closeSheet()">Got it</button>';
+  } else {
+    box.innerHTML='<h3>&mdash;</h3><div class="stext">Coming soon.</div><button class="sclose" onclick="closeSheet()">Close</button>';
+  }
+  document.getElementById('sheet').classList.add('open');
+}
+function closeSheet(){ document.getElementById('sheet').classList.remove('open'); }
+
+/* set today's date placeholder before autofill */
+document.getElementById('f-date').textContent='Tap auto-fill →';
+</script>
+</body>
+</html>

@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>FlyVault · Club Spine</title>
+<style>
+  :root{
+    --ink:#221d14; --ink-soft:#5e5343; --paper:#f4efe3;
+    --gold:#c8943f; --gold-deep:#a9762b; --oxblood:#7c3a2d;
+    --green:#3f6b4a; --dark:#1a140d; --hair:#ddd6c6;
+    --bg:#2b2a24;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{background:var(--bg);color:var(--ink);
+    font-family:'Iowan Old Style','Palatino Linotype','Georgia',serif}
+  body{max-width:480px;margin:0 auto;position:relative;overflow-x:hidden;min-height:100vh}
+  .util{font-family:-apple-system,'Segoe UI',sans-serif}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  .ambient{position:fixed;inset:0;z-index:0;
+    background:radial-gradient(120% 80% at 50% -10%, #3a382f 0%, #26251f 55%, #1c1b16 100%);}
+  .ambient::after{content:'';position:absolute;inset:0;
+    background:linear-gradient(to bottom, rgba(0,0,0,0) 60%, rgba(0,0,0,.35) 100%)}
+  .wrap{position:relative;z-index:5}
+
+  header{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;
+    padding:11px 16px;background:rgba(26,20,13,.92);backdrop-filter:blur(8px);border-bottom:1px solid #000}
+  .brand{font-size:19px;letter-spacing:.5px;color:var(--paper)}
+  .brand span{color:var(--gold)}
+  .hbtn{background:none;border:0;color:var(--paper);font-size:22px;cursor:pointer;line-height:1;padding:4px 8px}
+
+  /* cover + mast */
+  .cover{position:relative;height:182px;overflow:hidden}
+  .cover .pic{position:absolute;inset:0;background-size:cover;background-position:center}
+  .cover::after{content:'';position:absolute;inset:0;
+    background:linear-gradient(to bottom, rgba(20,15,9,.15) 0%, rgba(20,15,9,.55) 60%, rgba(43,42,36,1) 100%)}
+  .mast{position:relative;z-index:6;margin:-46px 16px 0;background:var(--paper);
+    border-radius:16px;padding:16px 16px 14px;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+  .mast .eyebrow{font-family:-apple-system,sans-serif;font-size:11px;font-weight:800;
+    letter-spacing:2.5px;text-transform:uppercase;color:var(--gold);opacity:.95}
+  .mast h1{font-size:25px;line-height:1.04;margin:5px 0 3px}
+  .mast .estd{font-family:-apple-system,sans-serif;font-size:12px;color:var(--ink-soft)}
+  .mast .estd b{color:var(--ink)}
+  .mast .stats{display:flex;gap:18px;margin:11px 0 13px;font-family:-apple-system,sans-serif}
+  .mast .stats .st{display:flex;flex-direction:column}
+  .mast .stats .st b{font-size:16px}
+  .mast .stats .st span{font-size:10.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.4px}
+  .mast .quick{display:flex;gap:8px;flex-wrap:wrap}
+  .mast .quick button{font-family:-apple-system,sans-serif;font-size:12.5px;font-weight:700;
+    border-radius:999px;padding:8px 14px;cursor:pointer;border:1px solid var(--hair);
+    background:#fff;color:var(--ink)}
+  .mast .quick button.primary{background:var(--gold-deep);border-color:var(--gold-deep);color:#fff}
+
+  /* admin bar */
+  .adminbar{margin:12px 16px 0;display:flex;align-items:center;gap:8px;background:var(--dark);
+    border-radius:12px;padding:9px 12px}
+  .adminbar .lock{font-size:14px}
+  .adminbar .at{flex:1;font-family:-apple-system,sans-serif;font-size:11.5px;color:#cfc4ad;line-height:1.3}
+  .adminbar .at b{color:var(--gold)}
+  .adminbar button{font-family:-apple-system,sans-serif;font-size:11px;font-weight:700;background:var(--gold);
+    border:0;border-radius:8px;padding:6px 11px;cursor:pointer;color:var(--dark)}
+
+  /* shelves */
+  .shelf{margin:26px 0 0}
+  .shelf .sh{display:flex;align-items:baseline;gap:8px;padding:0 16px 11px}
+  .shelf .sh h2{font-size:18px;color:var(--paper);letter-spacing:.3px}
+  .shelf .sh .more{margin-left:auto;font-family:-apple-system,sans-serif;font-size:12px;
+    color:var(--gold);cursor:pointer}
+  .shelf .sh .tag{font-family:-apple-system,sans-serif;font-size:9.5px;font-weight:800;letter-spacing:1px;
+    text-transform:uppercase;color:var(--gold-deep);background:rgba(200,148,63,.16);
+    padding:2px 7px;border-radius:5px}
+  .rail{display:flex;gap:12px;overflow-x:auto;padding:0 16px 6px;scroll-snap-type:x mandatory;
+    -webkit-overflow-scrolling:touch}
+  .rail::-webkit-scrollbar{display:none}
+
+  /* card DNA */
+  .card{flex:0 0 auto;width:230px;scroll-snap-align:start;background:var(--paper);
+    border-radius:13px;overflow:hidden;cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,.28);
+    display:flex;flex-direction:column}
+  .card.wide{width:280px}
+  .card .pic{height:124px;background-size:cover;background-position:center;position:relative}
+  .card .pic .pin{position:absolute;top:8px;left:8px;font-family:-apple-system,sans-serif;
+    font-size:9.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;
+    background:rgba(26,20,13,.82);color:var(--gold);padding:3px 8px;border-radius:6px}
+  .card .pic .pin.live{background:var(--oxblood);color:#fff}
+  .card .pic .pin.full{background:var(--ink-soft);color:#fff}
+  .card .cap{padding:11px 12px 13px;flex:1;display:flex;flex-direction:column}
+  .card .cap h3{font-size:15.5px;line-height:1.12;margin-bottom:5px}
+  .card .cap .sub{font-family:-apple-system,sans-serif;font-size:12px;color:var(--ink-soft);line-height:1.36;flex:1}
+  .card .cap .sub .accent{color:var(--gold-deep);font-weight:700}
+  .card .cap .foot{margin-top:9px;display:flex;align-items:center;gap:7px;
+    font-family:-apple-system,sans-serif;font-size:11px;color:var(--ink-soft)}
+  .card .cap .foot .av{flex:0 0 22px;height:22px;border-radius:50%;border:1.5px solid var(--paper);
+    background-size:cover;background-position:center}
+  .card .cap .foot .snap{margin-left:auto;color:var(--gold-deep);font-weight:800}
+
+  /* add-shelf */
+  .addshelf{margin:22px 16px 0;border:1.5px dashed #5a5240;border-radius:13px;padding:15px;
+    text-align:center;font-family:-apple-system,sans-serif;font-size:12.5px;color:#b6ab92;cursor:pointer}
+  .addshelf b{color:var(--gold)}
+
+  /* doctrine strip */
+  .doctrine{margin:30px 16px 0;border-left:3px solid var(--gold);background:rgba(200,148,63,.1);
+    border-radius:10px;padding:14px 15px;font-family:-apple-system,sans-serif;
+    font-size:12.5px;color:var(--ink-soft);line-height:1.5}
+  .doctrine b{color:var(--gold-deep)}
+  footer{padding:34px 16px 60px;text-align:center;font-family:-apple-system,sans-serif;
+    font-size:11px;color:#7d7460}
+
+  /* ===== detail view ===== */
+  #detail-view{position:fixed;inset:0;z-index:60;background:var(--bg);overflow-y:auto;
+    transform:translateX(100%);transition:transform .26s ease;-webkit-overflow-scrolling:touch}
+  #detail-view.open{transform:translateX(0)}
+  .dnav{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;
+    padding:12px 14px;background:rgba(26,20,13,.95);backdrop-filter:blur(8px);border-bottom:1px solid #000}
+  .dnav button{background:none;border:0;color:var(--paper);font-size:21px;cursor:pointer;padding:2px 6px}
+  .dnav .dt{flex:1;font-size:16px;color:var(--paper)}
+  .dnav .dc{color:var(--gold);font-size:13px;font-family:-apple-system,sans-serif}
+  #detail-body{padding:0 0 60px}
+  .dhero{height:172px;background-size:cover;background-position:center;position:relative}
+  .dhero::after{content:'';position:absolute;inset:0;
+    background:linear-gradient(to bottom, rgba(20,15,9,.1), rgba(43,42,36,1))}
+  .sheet{position:relative;z-index:5;margin-top:-30px;background:var(--paper);
+    border-radius:18px 18px 0 0;min-height:60vh;padding:20px 18px 40px}
+  .sheet .eyebrow{font-family:-apple-system,sans-serif;font-size:10.5px;font-weight:800;
+    letter-spacing:2px;text-transform:uppercase;color:var(--gold-deep)}
+  .sheet h2{font-size:23px;line-height:1.07;margin:5px 0 10px}
+  .sheet p{font-size:14.5px;line-height:1.5;margin-bottom:13px;color:var(--ink)}
+  .sheet p.lead{font-size:15px}
+  .sheet .muted{color:var(--ink-soft)}
+
+  /* reusable blocks inside sheet */
+  .kv{display:flex;gap:10px;margin:4px 0;font-family:-apple-system,sans-serif;font-size:13.5px}
+  .kv .k{flex:0 0 92px;color:var(--ink-soft);font-weight:700}
+  .kv .v{flex:1;color:var(--ink)}
+  .kv .v b{color:var(--oxblood)}
+
+  .rsvp{margin:16px 0;background:#fff;border:1px solid var(--hair);border-radius:14px;padding:15px}
+  .rsvp .cap{display:flex;align-items:center;margin-bottom:11px}
+  .rsvp .cap b{font-family:-apple-system,sans-serif;font-size:13px}
+  .rsvp .cap .count{margin-left:auto;font-family:-apple-system,sans-serif;font-size:12px;color:var(--ink-soft)}
+  .rsvp .cap .count b{color:var(--green)}
+  .seatbar{height:9px;border-radius:5px;background:var(--hair);overflow:hidden;margin-bottom:13px}
+  .seatbar i{display:block;height:100%;background:var(--green)}
+  .rsvp .btns{display:flex;gap:8px}
+  .rsvp .btns button{flex:1;font-family:-apple-system,sans-serif;font-size:13px;font-weight:700;
+    border-radius:10px;padding:11px;cursor:pointer;border:1px solid var(--hair);background:#fff;color:var(--ink)}
+  .rsvp .btns button.go{background:var(--green);border-color:var(--green);color:#fff}
+  .rsvp .roster{margin-top:13px;display:flex;flex-wrap:wrap;gap:6px}
+  .rsvp .roster .av{width:30px;height:30px;border-radius:50%;border:2px solid var(--paper);
+    background-size:cover;background-position:center;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+  .rsvp .roster .more{width:30px;height:30px;border-radius:50%;background:var(--hair);
+    display:flex;align-items:center;justify-content:center;font-family:-apple-system,sans-serif;
+    font-size:11px;font-weight:800;color:var(--ink-soft)}
+
+  .coord{display:flex;align-items:center;gap:11px;margin:14px 0;background:var(--dark);
+    border-radius:13px;padding:12px}
+  .coord .av{flex:0 0 44px;height:44px;border-radius:50%;border:2px solid var(--gold);
+    background-size:cover;background-position:center}
+  .coord .ct{flex:1;font-family:-apple-system,sans-serif;color:var(--paper)}
+  .coord .ct .role{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--gold)}
+  .coord .ct .nm{font-size:14px;margin-top:1px}
+  .coord .ct .ph{font-size:12px;color:#cfc4ad;margin-top:2px}
+  .coord button{font-family:-apple-system,sans-serif;font-size:11px;font-weight:700;background:var(--gold);
+    border:0;border-radius:8px;padding:8px 12px;cursor:pointer;color:var(--dark)}
+
+  .agenda{margin:8px 0 4px;border-left:2px solid var(--hair);padding-left:14px}
+  .agenda .ai{position:relative;padding:7px 0}
+  .agenda .ai::before{content:'';position:absolute;left:-19px;top:12px;width:9px;height:9px;
+    border-radius:50%;background:var(--gold);border:2px solid var(--paper)}
+  .agenda .ai .t{font-family:-apple-system,sans-serif;font-size:11px;color:var(--ink-soft);font-weight:700}
+  .agenda .ai .d{font-size:14px;margin-top:1px}
+
+  .dues{margin:16px 0;background:#fff;border:1px solid var(--hair);border-radius:14px;padding:16px}
+  .dues .big{font-size:30px;font-weight:800;font-family:-apple-system,sans-serif;color:var(--ink)}
+  .dues .big small{font-size:14px;color:var(--ink-soft);font-weight:600}
+  .dues .stat{font-family:-apple-system,sans-serif;font-size:12.5px;color:var(--green);font-weight:700;margin:4px 0 12px}
+  .dues .stat.due{color:var(--oxblood)}
+  .dues button{width:100%;font-family:-apple-system,sans-serif;font-size:14px;font-weight:800;
+    background:var(--gold-deep);border:0;border-radius:11px;padding:13px;cursor:pointer;color:#fff}
+
+  .officers{display:flex;flex-direction:column;gap:9px;margin:8px 0}
+  .officer{display:flex;align-items:center;gap:11px;background:#fff;border:1px solid var(--hair);
+    border-radius:12px;padding:10px 12px}
+  .officer .av{flex:0 0 42px;height:42px;border-radius:50%;background-size:cover;background-position:center;
+    border:2px solid var(--paper);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+  .officer .ot{flex:1;font-family:-apple-system,sans-serif}
+  .officer .ot .role{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--gold-deep);font-weight:800}
+  .officer .ot .nm{font-size:14.5px;margin-top:1px;color:var(--ink)}
+
+  .note{background:#fff;border:1px solid var(--hair);border-radius:12px;padding:12px 13px;margin:10px 0}
+  .note.self{border-left:3px solid var(--gold)}
+  .note .nh{display:flex;align-items:center;font-family:-apple-system,sans-serif;font-size:10.5px;
+    font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--gold-deep);margin-bottom:6px}
+  .note .nh .who{margin-left:auto;color:var(--ink-soft);font-weight:600;letter-spacing:.3px;
+    text-transform:none;font-size:11px}
+  .note .nb{font-size:13.5px;line-height:1.45;color:var(--ink)}
+
+  .routecard{margin:14px 0;background:var(--dark);color:var(--paper);border:none;border-radius:13px;padding:14px}
+  .routecard .rwhat{font-family:-apple-system,sans-serif;font-size:14px;font-weight:700}
+  .routecard .rwhen{font-family:-apple-system,sans-serif;font-size:12px;color:#cfc4ad;margin-top:5px}
+  .flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:11px}
+  .chip{font-family:-apple-system,sans-serif;font-size:11px;font-weight:700;border-radius:7px;
+    padding:5px 9px;background:#2c241a;color:#cfc4ad;border:1px solid #3a3026}
+  .chip.guide{background:rgba(200,148,63,.16);color:var(--gold);border:1px solid rgba(200,148,63,.4)}
+  .flow .arr{color:#8a7f6a;font-family:-apple-system,sans-serif}
+
+  .scrub{position:relative;height:6px;border-radius:3px;background:var(--hair);margin:14px 0 10px}
+  .scrub .played{position:absolute;left:0;top:0;bottom:0;width:38%;background:var(--gold);border-radius:3px}
+  .scrub .head{position:absolute;left:38%;top:50%;width:14px;height:14px;border-radius:50%;
+    background:var(--oxblood);border:2px solid var(--paper);transform:translate(-50%,-50%);cursor:pointer}
+  .bmrow{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--hair)}
+  .bmrow .ts{font-family:-apple-system,sans-serif;font-size:12px;font-weight:800;color:var(--oxblood);
+    flex:0 0 42px;padding-top:1px}
+  .bmrow .bn{font-family:-apple-system,sans-serif;font-size:12.5px;color:var(--ink-soft);line-height:1.4}
+  .bmrow .bn b{color:var(--ink)}
+
+  /* conservation tally */
+  .tally{display:flex;gap:10px;margin:14px 0}
+  .tally .tcell{flex:1;background:#fff;border:1px solid var(--hair);border-radius:12px;padding:12px;text-align:center}
+  .tally .tcell b{display:block;font-family:-apple-system,sans-serif;font-size:22px;color:var(--green)}
+  .tally .tcell span{font-family:-apple-system,sans-serif;font-size:10.5px;color:var(--ink-soft);
+    text-transform:uppercase;letter-spacing:.4px}
+
+  .cta{width:100%;font-family:-apple-system,sans-serif;font-size:14px;font-weight:800;
+    background:var(--gold-deep);border:0;border-radius:12px;padding:14px;cursor:pointer;color:#fff;margin-top:8px}
+  .cta.ghost{background:transparent;color:var(--ink);border:1px solid var(--hair)}
+  .parked{margin:14px 0;border:1px dashed #b9ad92;border-radius:12px;padding:13px;
+    font-family:-apple-system,sans-serif;font-size:12.5px;color:var(--ink-soft);line-height:1.45;text-align:center}
+  .parked b{color:var(--gold-deep)}
+
+  /* ===== modal ===== */
+  #modal{position:fixed;inset:0;z-index:80;display:none;align-items:flex-end;justify-content:center;
+    background:rgba(10,8,5,.55)}
+  #modal.open{display:flex}
+  #modal-box{width:100%;max-width:480px;background:var(--paper);border-radius:20px 20px 0 0;
+    padding:8px 0 26px;animation:rise .22s ease}
+  @keyframes rise{from{transform:translateY(40px);opacity:.6}to{transform:translateY(0);opacity:1}}
+  #modal-box .grab{width:42px;height:5px;border-radius:3px;background:var(--hair);margin:6px auto 14px}
+  #modal-box .mc{padding:0 20px}
+  #modal-box .mf{font-size:30px;margin-bottom:8px}
+  #modal-box h3{font-size:20px;margin-bottom:6px}
+  #modal-box .what{font-size:14.5px;line-height:1.5;color:var(--ink);margin-bottom:13px}
+  #modal-box .why{font-family:-apple-system,sans-serif;font-size:12.5px;line-height:1.5;color:var(--ink-soft);
+    background:rgba(200,148,63,.12);border-left:3px solid var(--gold);border-radius:8px;padding:11px 13px;margin-bottom:16px}
+  #modal-box .why b{color:var(--gold-deep)}
+  #modal-box .mclose{width:100%;font-family:-apple-system,sans-serif;font-size:14px;font-weight:700;
+    background:var(--dark);border:0;border-radius:12px;padding:13px;cursor:pointer;color:var(--paper)}
+
+  /* hamburger sheet list */
+  .menulist{padding:4px 0}
+  .menulist .mi{display:flex;align-items:center;gap:13px;padding:13px 20px;cursor:pointer;
+    border-bottom:1px solid var(--hair);font-family:-apple-system,sans-serif}
+  .menulist .mi .ic{font-size:19px;width:24px;text-align:center}
+  .menulist .mi .mt{flex:1;font-size:15px;color:var(--ink)}
+  .menulist .mi .ms{font-size:11.5px;color:var(--ink-soft);margin-top:1px}
+  .menulist .mi .chev{color:var(--ink-soft)}
+
+  /* shared gradient placeholders (no external image deps) */
+  .g-river{background:linear-gradient(150deg,#4a6b6e 0%,#2f4a4d 45%,#22332f 100%)}
+  .g-bank{background:linear-gradient(150deg,#6e5a3a 0%,#4a3c26 50%,#2c2418 100%)}
+  .g-meet{background:linear-gradient(150deg,#3a4654 0%,#2a323d 55%,#1d2128 100%)}
+  .g-dues{background:linear-gradient(150deg,#5a4a2c 0%,#3e3320 55%,#241d12 100%)}
+  .g-conserv{background:linear-gradient(150deg,#3f6b4a 0%,#2c4a34 55%,#1d3022 100%)}
+  .g-hist{background:linear-gradient(150deg,#6b5436 0%,#4a3a24 55%,#2c2216 100%)}
+  .g-mentor{background:linear-gradient(150deg,#7c3a2d 0%,#5a2a20 55%,#331810 100%)}
+  .g-raffle{background:linear-gradient(150deg,#a9762b 0%,#7c5620 55%,#4a3413 100%)}
+  .g-feed{background:linear-gradient(150deg,#4a4636 0%,#36332a 55%,#22201a 100%)}
+  .g-chat{background:linear-gradient(150deg,#3a4a52 0%,#2a363d 55%,#1d272c 100%)}
+  .g-vid{background:linear-gradient(150deg,#54463a 0%,#3d332a 55%,#22201a 100%)}
+  .g-cab{background:linear-gradient(150deg,#5a3e2a 0%,#3e2a1c 55%,#241710 100%)}
+  .g-cast{background:linear-gradient(150deg,#456b78 0%,#2f4a54 55%,#1f3138 100%)}
+  .g-a1{background:linear-gradient(135deg,#7c6a4a,#4a3c26)}
+  .g-a2{background:linear-gradient(135deg,#4a5a6b,#2c3a4a)}
+  .g-a3{background:linear-gradient(135deg,#6b4a3a,#3a261c)}
+  .g-a4{background:linear-gradient(135deg,#3f6b4a,#234a30)}
+  .g-a5{background:linear-gradient(135deg,#a9762b,#5a3e13)}
+  .g-a6{background:linear-gradient(135deg,#5a4a6b,#332a4a)}
+</style>
+</head>
+<body>
+  <div class="ambient"></div>
+  <div class="wrap">
+    <header>
+      <div class="brand">Fly<span>Vault</span> · Clubs</div>
+      <button class="hbtn" onclick="modal('menu')">☰</button>
+    </header>
+
+    <!-- cover + mast -->
+    <div class="cover"><div class="pic g-river"></div></div>
+    <div class="mast">
+      <div class="eyebrow">Fly Fishing Club</div>
+      <h1>Driftless Anglers Club</h1>
+      <div class="estd">Founded <b>1971</b> · Coon Valley, Wisconsin · A FlyVault home water</div>
+      <div class="stats">
+        <div class="st"><b>312</b><span>Members</span></div>
+        <div class="st"><b>9</b><span>Officers</span></div>
+        <div class="st"><b>14</b><span>Outings / yr</span></div>
+      </div>
+      <div class="quick">
+        <button class="primary" onclick="modal('join')">Join the club</button>
+        <button onclick="openDetail('dues')">Pay dues</button>
+        <button onclick="openDetail('outing')">Next outing</button>
+      </div>
+    </div>
+
+    <div class="adminbar">
+      <span class="lock">🛡️</span>
+      <div class="at"><b>Admin view.</b> This is the blank club spine — every shelf below is a movable block. Drop in your own outings, officers and guides, or hide the ones you don't run.</div>
+      <button onclick="modal('blankslate')">How it works</button>
+    </div>
+
+    <!-- ===== OUTINGS — the heartbeat ===== -->
+    <div class="shelf">
+      <div class="sh"><span class="tag">Heartbeat</span><h2>Outings & RSVP</h2><span class="more" onclick="openDetail('outing')">Calendar →</span></div>
+      <div class="rail">
+        <div class="card" onclick="openDetail('outing')">
+          <div class="pic g-river"><span class="pin live">RSVP open · 6 seats</span></div>
+          <div class="cap"><h3>Timber Coulee, Saturday Wade</h3>
+            <div class="sub">Trico spinner fall at first light. <span class="accent">Carpool from the Kwik Trip 6:30 AM.</span> Coordinator carries the sign-up sheet so nobody falls through.</div>
+            <div class="foot"><div class="av g-a1"></div>Led by Dale R. <span class="snap">18 going</span></div>
+          </div>
+        </div>
+        <div class="card" onclick="openDetail('outing')">
+          <div class="pic g-bank"><span class="pin">Sat · Aug 9</span></div>
+          <div class="cap"><h3>Kickapoo Float — Tandem Canoes</h3>
+            <div class="sub">Hopper-dropper drift. <span class="accent">12 boat seats, paired on RSVP.</span> Low-water put-in times posted the night before.</div>
+            <div class="foot"><div class="av g-a2"></div>Led by Marie K. <span class="snap">9 going</span></div>
+          </div>
+        </div>
+        <div class="card" onclick="openDetail('outing')">
+          <div class="pic g-conserv"><span class="pin full">Lunch sold out</span></div>
+          <div class="cap"><h3>Annual Picnic & Casting Field Day</h3>
+            <div class="sub">Family day at the springhouse. Lunch registration caps separately from attendance — both tracked here, not in a spreadsheet.</div>
+            <div class="foot"><div class="av g-a3"></div>Hosted by the board <span class="snap">61 going</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MEETINGS ===== -->
+    <div class="shelf">
+      <div class="sh"><h2>Meetings & Programs</h2><span class="more" onclick="openDetail('meeting')">All →</span></div>
+      <div class="rail">
+        <div class="card wide" onclick="openDetail('meeting')">
+          <div class="pic g-meet"><span class="pin">3rd Tuesday · 7 PM</span></div>
+          <div class="cap"><h3>August Membership Meeting</h3>
+            <div class="sub">Guest tyer <span class="accent">Ryan Storch</span> on tailwater scuds, then the conservation report. Agenda, minutes and the speaker bio all live on the meeting page.</div>
+            <div class="foot"><div class="av g-a4"></div>Community Hall, Westby</div>
+          </div>
+        </div>
+        <div class="card" onclick="openDetail('meeting')">
+          <div class="pic g-cast"><span class="pin">Clinic</span></div>
+          <div class="cap"><h3>Beginner Casting Clinic</h3>
+            <div class="sub">Loaner rods provided. Pairs new members with a mentor before the 7 PM program. Sign up on the same page.</div>
+            <div class="foot"><div class="av g-a5"></div>6 PM, ball field</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MEMBERSHIP / DUES ===== -->
+    <div class="shelf">
+      <div class="sh"><span class="tag">FB can't do this</span><h2>Membership & Dues</h2><span class="more" onclick="openDetail('dues')">Manage →</span></div>
+      <div class="rail">
+        <div class="card" onclick="openDetail('dues')">
+          <div class="pic g-dues"><span class="pin">Renewal</span></div>
+          <div class="cap"><h3>2026 Dues — Renew Now</h3>
+            <div class="sub">$45 individual · $65 family. <span class="accent">Calendar, roster and dues all read from one record</span> — no more PayPal link + mailed check + "email us if your info changed."</div>
+            <div class="foot"><div class="av g-a6"></div>Treasurer: Hank V.</div>
+          </div>
+        </div>
+        <div class="card" onclick="openDetail('roster')">
+          <div class="pic g-bank"><span class="pin">Roster</span></div>
+          <div class="cap"><h3>Member Roster & Profiles</h3>
+            <div class="sub">Search by name, home water, or skill. Admin notes ride along on each profile — the lightweight member CRM Facebook never gave you.</div>
+            <div class="foot"><div class="av g-a1"></div>312 members</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== OFFICERS ===== -->
+    <div class="shelf">
+      <div class="sh"><h2>Officers & Roles</h2><span class="more" onclick="openDetail('officers')">Board →</span></div>
+      <div class="rail">
+        <div class="card" onclick="openDetail('officers')">
+          <div class="pic g-hist"><span class="pin">The board</span></div>
+          <div class="cap"><h3>2026 Officers</h3>
+            <div class="sub">President, Secretary, Treasurer, plus <span class="accent">Conservation & Programs chairs</span> and outing coordinators. Each role has a face, a contact, and what they're responsible for.</div>
+            <div class="foot"><div class="av g-a2"></div>9 seats filled</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== CONSERVATION ===== -->
+    <div class="shelf">
+      <div class="sh"><span class="tag">Club identity</span><h2>Conservation & Stewardship</h2><span class="more" onclick="openDetail('conserv')">Projects →</span></div>
+      <div class="rail">
+        <div class="card wide" onclick="openDetail('conserv')">
+          <div class="pic g-conserv"><span class="pin">Workday · Sep 13</span></div>
+          <div class="cap"><h3>Timber Coulee Bank Restoration</h3>
+            <div class="sub">Brush-bundle install with Trout Unlimited. <span class="accent">Volunteer hours log straight into the club's annual stewardship tally</span> for the grant report.</div>
+            <div class="foot"><div class="av g-a4"></div>Conservation chair: Lena P.</div>
+          </div>
+        </div>
+        <div class="card" onclick="openDetail('conserv')">
+          <div class="pic g-river"><span class="pin">Monitoring</span></div>
+          <div class="cap"><h3>Stream Temp & Macro Survey</h3>
+            <div class="sub">Members log readings from their home reaches. Feeds the same waterway data the vault uses for hatch matching.</div>
+            <div class="foot"><div class="av g-a3"></div>22 monitors</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== HISTORY / LIBRARY ===== -->
+    <div class="shelf">
+      <div class="sh"><h2>Club History & Library</h2><span class="more" onclick="openDetail('history')">Archive →</span></div>
+      <div class="rail">
+        <div class="card" onclick="openDetail('history')">
+          <div class="pic g-hist"><span class="pin">Since 1971</span></div>
+          <div class="cap"><h3>Founders & Fifty Years</h3>
+            <div class="sub">Charter members, old newsletters, the patterns this club is known for. <span class="accent">An archive that won't rot</span> the way a Facebook feed does.</div>
+            <div class="foot"><div class="av g-a1"></div>54 years</div>
+          </div>
+        </div>
+        <div class="card" onclick="openDetail('history')">
+          <div class="pic g-cab"><span class="pin">Lending</span></div>
+          <div class="cap"><h3>Club Library & Loaner Gear</h3>
+            <div class="sub">Books, vises, and loaner rods members can check out. Tracked so the 5-weight actually comes back.</div>
+            <div class="foot"><div class="av g-a5"></div>40 items</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MENTOR ===== -->
+    <div class="shelf">
+      <div class="sh"><h2>Mentor Program</h2><span class="more" onclick="openDetail('mentor')">Pairs →</span></div>
+      <div class="rail">
+        <div class="card wide" onclick="openDetail('mentor')">
+          <div class="pic g-mentor"><span class="pin">New members</span></div>
+          <div class="cap"><h3>Pair a Newcomer with a Mentor</h3>
+            <div class="sub">First-season members get matched with a veteran for outings and bench time. <span class="accent">The on-ramp that keeps people coming back.</span></div>
+            <div class="foot"><div class="av g-a2"></div>11 active pairs</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== FUNDRAISING ===== -->
+    <div class="shelf">
+      <div class="sh"><h2>Raffles & Fundraising</h2><span class="more" onclick="openDetail('raffle')">Tickets →</span></div>
+      <div class="rail">
+        <div class="card" onclick="openDetail('raffle')">
+          <div class="pic g-raffle"><span class="pin live">87 tickets left</span></div>
+          <div class="cap"><h3>Winter Banquet Raffle</h3>
+            <div class="sub">Bamboo rod, guided float, fly plates. <span class="accent">The fundraising engine</span> — buy, track and draw winners without a shoebox of stubs.</div>
+            <div class="foot"><div class="av g-a6"></div>Funds conservation</div>
+          </div>
+        </div>
+        <div class="card" onclick="openDetail('raffle')">
+          <div class="pic g-dues"><span class="pin">Dinner</span></div>
+          <div class="cap"><h3>Banquet Tickets — Jan 24</h3>
+            <div class="sub">Table reservations and meal counts in one place, tied to who's actually paid.</div>
+            <div class="foot"><div class="av g-a3"></div>Westby Rod & Gun</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== RETAINED: feed / chat / collection / tie-along / videos ===== -->
+    <div class="shelf">
+      <div class="sh"><span class="tag">Replaces FB</span><h2>Club Feed</h2><span class="more" onclick="openDetail('feed')">Open →</span></div>
+      <div class="rail">
+        <div class="card wide" onclick="openDetail('feed')">
+          <div class="pic g-feed"><span class="pin">Live</span></div>
+          <div class="cap"><h3>What's Happening on the Water</h3>
+            <div class="sub">Catch reports, hatch calls, lost-and-found. <span class="accent">Same posting flow members already know</span> — just inside a place that's yours, not the algorithm's.</div>
+            <div class="foot"><div class="av g-a1"></div>14 new today</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="shelf">
+      <div class="sh"><h2>Chat Rooms</h2><span class="more" onclick="openDetail('chat')">Rooms →</span></div>
+      <div class="rail">
+        <div class="card" onclick="openDetail('chat')">
+          <div class="pic g-chat"><span class="pin">3 unread</span></div>
+          <div class="cap"><h3>Streamside (general)</h3>
+            <div class="sub">Real-time room for conditions and quick questions. The fast lane the feed isn't.</div>
+            <div class="foot"><div class="av g-a4"></div>Always on</div>
+          </div>
+        </div>
+        <div class="card" onclick="modal('parkedchat')">
+          <div class="pic g-cab"><span class="pin full">Parked</span></div>
+          <div class="cap"><h3>Ask MIDGE (room)</h3>
+            <div class="sub">A standing room where the vault's reasoning layer answers club questions. Switched off until you turn it on.</div>
+            <div class="foot"><div class="av g-a5"></div>Off by default</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="shelf">
+      <div class="sh"><span class="tag">Anti-rot</span><h2>Tie-Alongs & Guides</h2><span class="more" onclick="openDetail('tiealong')">Lessons →</span></div>
+      <div class="rail">
+        <div class="card wide" onclick="openDetail('tiealong')">
+          <div class="pic g-cab"><span class="pin">Threaded lesson</span></div>
+          <div class="cap"><h3>Club Pattern: The Coulee Caddis</h3>
+            <div class="sub">Step-by-step tie where members <span class="accent">reply per step with their own attempt.</span> Same shape MIDGE uses when it teaches — built once, reused.</div>
+            <div class="foot"><div class="av g-a2"></div>9 tying along</div>
+          </div>
+        </div>
+        <div class="card" onclick="openDetail('guide')">
+          <div class="pic g-feed"><span class="pin">Auto-built</span></div>
+          <div class="cap"><h3>Material Monday → Guide</h3>
+            <div class="sub">Recurring scheduled posts file themselves into a named Guide, so the archive builds itself.</div>
+            <div class="foot"><div class="av g-a6"></div>Append-only</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="shelf">
+      <div class="sh"><h2>Video Bookmarks</h2><span class="more" onclick="openDetail('video')">Library →</span></div>
+      <div class="rail">
+        <div class="card wide" onclick="openDetail('video')">
+          <div class="pic g-vid"><span class="pin">Timestamped</span></div>
+          <div class="cap"><h3>Tippet-to-Fly Knot, the Right Way</h3>
+            <div class="sub">Members drop <span class="accent">timestamp markers with notes</span> right into the video — the manual twin of MIDGE sending you to the exact 90 seconds that matter.</div>
+            <div class="foot"><div class="av g-a3"></div>7 bookmarks</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== CABINET (private MIDGE primitive) ===== -->
+    <div class="shelf">
+      <div class="sh"><span class="tag">Private</span><h2>Your Filing Cabinet</h2><span class="more" onclick="openDetail('cabinet')">Open →</span></div>
+      <div class="rail">
+        <div class="card wide" onclick="openDetail('cabinet')">
+          <div class="pic g-cab"><span class="pin">Just you</span></div>
+          <div class="cap"><h3>Your Private Bench</h3>
+            <div class="sub">Saved patterns, your home reaches, your notes. <span class="accent">This teaches your MIDGE</span> — it never goes to the club feed, and nobody else sees it.</div>
+            <div class="foot"><div class="av g-a1"></div>Encrypted to you</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- add shelf -->
+    <div class="addshelf" onclick="modal('addshelf')">＋ &nbsp;<b>Add another shelf</b> — outings, committees, a youth program, whatever your club actually runs</div>
+
+    <!-- doctrine -->
+    <div class="doctrine">
+      <b>Why a club shell, not just a group.</b> A tying group is content and conversation. A club is a small institution — outings with sign-up sheets, dues, officers, a conservation mission, a history worth keeping. This spine adds that machinery on top of the card DNA you already locked, and keeps every snapshot/MIDGE primitive intact underneath.
+    </div>
+
+    <footer>FlyVault · Club Spine — blank-slate prototype · all data illustrative</footer>
+  </div>
+
+  <!-- ===== DETAIL VIEW ===== -->
+  <div id="detail-view">
+    <div class="dnav">
+      <button onclick="closeDetail()">‹</button>
+      <div class="dt" id="detail-title">Detail</div>
+      <div class="dc" onclick="modal('explain')">What's this?</div>
+    </div>
+    <div id="detail-body"></div>
+  </div>
+
+  <!-- ===== MODAL ===== -->
+  <div id="modal" onclick="if(event.target===this)closeModal()">
+    <div id="modal-box">
+      <div class="grab"></div>
+      <div class="mc" id="modal-content"></div>
+    </div>
+  </div>
+
+<script>
+/* ---------- DETAIL VIEWS ---------- */
+const VIEWS = {
+  outing: {title:"Outing", hero:"g-river", body:`
+    <div class="sheet">
+      <div class="eyebrow">Saturday Wade &middot; Aug 2</div>
+      <h2>Timber Coulee Trico Morning</h2>
+      <p class="lead">First light spinner fall, then a slow drift to the bridge pool. This is the page that replaces the clipboard, the group thread, and the three texts asking &ldquo;are we still on?&rdquo;</p>
+      <div class="kv"><div class="k">Meet</div><div class="v"><b>6:30 AM</b> &middot; Kwik Trip, Hwy 14 &mdash; carpool stages here</div></div>
+      <div class="kv"><div class="k">Water</div><div class="v">Timber Coulee, lower catch-and-release</div></div>
+      <div class="kv"><div class="k">Bring</div><div class="v">Waders, 5x&ndash;6x, tricos &amp; ant patterns</div></div>
+      <div class="kv"><div class="k">Low-tide</div><div class="v">Reach times posted Friday night</div></div>
+      <div class="rsvp">
+        <div class="cap"><b>RSVP &mdash; attendance</b><div class="count"><b>18</b> going &middot; 6 seats left</div></div>
+        <div class="seatbar"><i style="width:75%"></i></div>
+        <div class="btns">
+          <button class="go" onclick="modal('rsvpok')">I'm going</button>
+          <button onclick="modal('rsvpmaybe')">Maybe</button>
+          <button onclick="modal('rsvpno')">Out</button>
+        </div>
+        <div class="roster">
+          <div class="av g-a1"></div><div class="av g-a2"></div><div class="av g-a3"></div>
+          <div class="av g-a4"></div><div class="av g-a5"></div><div class="av g-a6"></div>
+          <div class="more">+12</div>
+        </div>
+      </div>
+      <div class="rsvp">
+        <div class="cap"><b>Carpool seats</b><div class="count"><b>4</b> seats open</div></div>
+        <div class="seatbar"><i style="width:67%"></i></div>
+        <p class="muted" style="font-size:13px;margin:6px 0 0">Drivers and riders pair here &mdash; separate from attendance, because they're separate problems.</p>
+      </div>
+      <div class="coord">
+        <div class="av g-a1"></div>
+        <div class="ct">
+          <div class="role">Outing Coordinator</div>
+          <div class="nm">Dale Rasmussen</div>
+          <div class="ph">&#128222; (608) 555-0148 &middot; texts OK</div>
+        </div>
+        <button onclick="modal('callcoord')">Contact</button>
+      </div>
+      <button class="cta ghost" onclick="modal('addtocal')">Add to my calendar</button>
+    </div>`},
+
+  meeting: {title:"Meeting", hero:"g-meet", body:`
+    <div class="sheet">
+      <div class="eyebrow">Membership Meeting &middot; 3rd Tuesday</div>
+      <h2>August Program: Tailwater Scuds</h2>
+      <p class="lead">Doors 6 PM for the beginner casting clinic, program at 7. The agenda, the speaker bio, and last month's minutes all live here &mdash; not scattered across an email and two posts.</p>
+      <div class="coord">
+        <div class="av g-a4"></div>
+        <div class="ct"><div class="role">Guest Speaker</div><div class="nm">Ryan Storch</div><div class="ph">Competition tyer &middot; patterns in the vault</div></div>
+        <button onclick="modal('speaker')">Bio</button>
+      </div>
+      <div class="agenda">
+        <div class="ai"><div class="t">6:00 PM</div><div class="d">Beginner casting clinic &mdash; loaner rods</div></div>
+        <div class="ai"><div class="t">7:00 PM</div><div class="d">Welcome &amp; new member intros</div></div>
+        <div class="ai"><div class="t">7:15 PM</div><div class="d">Program &mdash; tailwater scuds with Ryan Storch</div></div>
+        <div class="ai"><div class="t">8:00 PM</div><div class="d">Conservation report &mdash; Timber Coulee workday</div></div>
+        <div class="ai"><div class="t">8:20 PM</div><div class="d">Raffle drawing &amp; adjourn</div></div>
+      </div>
+      <button class="cta" onclick="modal('rsvpmeeting')">I'll be there</button>
+      <button class="cta ghost" onclick="modal('minutes')">Read July minutes</button>
+    </div>`},
+
+  dues: {title:"Dues", hero:"g-dues", body:`
+    <div class="sheet">
+      <div class="eyebrow">Membership &middot; 2026</div>
+      <h2>Renew Your Dues</h2>
+      <p class="lead">One record. Your dues, your roster entry, your outing RSVPs and your mentor pairing all read from the same place &mdash; so nothing ever falls out of sync.</p>
+      <div class="dues">
+        <div class="big">$45<small> / individual &middot; $65 family</small></div>
+        <div class="stat due">Your 2026 dues are due &mdash; expired Jan 1</div>
+        <button onclick="modal('paydues')">Renew for 2026</button>
+      </div>
+      <p class="muted" style="font-size:13.5px">The old way was a PayPal link, a mailed check, and &ldquo;email us if your address changed.&rdquo; Here the payment <b>is</b> the update &mdash; pay and your roster card, badge and access all move with it.</p>
+      <div class="note self">
+        <div class="nh">Treasurer note &middot; admin-only<span class="who">Hank V.</span></div>
+        <div class="nb">Family plan covers Jaselynn's youth membership at no extra charge &mdash; flagged so she shows in the youth program roster too.</div>
+      </div>
+    </div>`},
+
+  roster: {title:"Roster", hero:"g-bank", body:`
+    <div class="sheet">
+      <div class="eyebrow">Members &middot; 312</div>
+      <h2>Roster &amp; Member CRM</h2>
+      <p class="lead">Search by name, home water, or skill level. The piece Facebook never gave admins: notes that ride along on a member's profile.</p>
+      <div class="officer">
+        <div class="av g-a2"></div>
+        <div class="ot"><div class="role">Member &middot; since 2019</div><div class="nm">Marie Kowalski</div></div>
+      </div>
+      <div class="note self">
+        <div class="nh">Member note &middot; self + admins<span class="who">added by Lena P.</span></div>
+        <div class="nb">Runs the Kickapoo floats. Has the trailer. First call for any boat outing.</div>
+      </div>
+      <div class="note">
+        <div class="nh">Member note &middot; admins only<span class="who">added by you</span></div>
+        <div class="nb">New as of spring &mdash; paired in the mentor program, doing great. Loaner 5wt checked out, due back after the banquet.</div>
+      </div>
+      <p class="muted" style="font-size:13px">Visibility is a per-note switch: self-and-admins, or admins-only. A lightweight member CRM, not a public wall.</p>
+    </div>`},
+
+  officers: {title:"Officers", hero:"g-hist", body:`
+    <div class="sheet">
+      <div class="eyebrow">Board &middot; 2026</div>
+      <h2>Officers &amp; Roles</h2>
+      <p class="lead">A club runs on its roles. Every one here has a face, a way to reach them, and a one-line job description &mdash; so members know who to ask.</p>
+      <div class="officers">
+        <div class="officer"><div class="av g-a1"></div><div class="ot"><div class="role">President</div><div class="nm">Dale Rasmussen</div></div></div>
+        <div class="officer"><div class="av g-a2"></div><div class="ot"><div class="role">Secretary</div><div class="nm">Marie Kowalski</div></div></div>
+        <div class="officer"><div class="av g-a3"></div><div class="ot"><div class="role">Treasurer</div><div class="nm">Hank Vogel</div></div></div>
+        <div class="officer"><div class="av g-a4"></div><div class="ot"><div class="role">Conservation Chair</div><div class="nm">Lena Pace</div></div></div>
+        <div class="officer"><div class="av g-a5"></div><div class="ot"><div class="role">Programs Chair</div><div class="nm">Tom Errico</div></div></div>
+        <div class="officer"><div class="av g-a6"></div><div class="ot"><div class="role">Outing Coordinator</div><div class="nm">Sam Whitlow</div></div></div>
+        <div class="officer"><div class="av g-a1"></div><div class="ot"><div class="role">Youth &amp; Mentor Lead</div><div class="nm">Cass J.</div></div></div>
+      </div>
+      <button class="cta ghost" onclick="modal('roles')">What each role owns</button>
+    </div>`},
+
+  conserv: {title:"Conservation", hero:"g-conserv", body:`
+    <div class="sheet">
+      <div class="eyebrow">Stewardship &middot; Workday Sep 13</div>
+      <h2>Timber Coulee Restoration</h2>
+      <p class="lead">Conservation isn't a side channel for this club &mdash; it's the identity. Brush-bundle bank install with Trout Unlimited, then a fish shocking survey.</p>
+      <div class="tally">
+        <div class="tcell"><b>1,140</b><span>Volunteer hrs '26</span></div>
+        <div class="tcell"><b>2.3</b><span>Stream mi restored</span></div>
+        <div class="tcell"><b>$8.4k</b><span>Grant matched</span></div>
+      </div>
+      <p class="muted" style="font-size:13.5px">Hours logged at the workday roll straight into this tally &mdash; the number the grant report needs, without anyone retyping a sign-in sheet.</p>
+      <div class="rsvp">
+        <div class="cap"><b>Workday volunteers</b><div class="count"><b>14</b> signed up</div></div>
+        <div class="seatbar"><i style="width:56%"></i></div>
+        <div class="btns"><button class="go" onclick="modal('volunteer')">Count me in</button></div>
+      </div>
+      <button class="cta ghost" onclick="modal('monitor')">Log a stream-temp reading</button>
+    </div>`},
+
+  history: {title:"History", hero:"g-hist", body:`
+    <div class="sheet">
+      <div class="eyebrow">Since 1971 &middot; 54 years</div>
+      <h2>Founders, Library &amp; Loaner Gear</h2>
+      <p class="lead">The archive a Facebook feed can't be. Charter members, decades of newsletters, the patterns this club is known for &mdash; and the lending library that keeps gear in members' hands.</p>
+      <div class="note">
+        <div class="nh">Founders<span class="who">est. 1971</span></div>
+        <div class="nb">Seven anglers and a shared lease on the Timber Coulee. The original charter and the first newsletter are scanned in the archive.</div>
+      </div>
+      <div class="dues" style="padding:14px">
+        <div class="big" style="font-size:22px">Lending Library</div>
+        <div class="stat">40 items in &middot; 6 checked out</div>
+        <button onclick="modal('checkout')">Browse &amp; check out</button>
+      </div>
+      <p class="muted" style="font-size:13px">Books, vises, and loaner rods are tracked on the same record system &mdash; so the 5-weight actually comes home.</p>
+    </div>`},
+
+  mentor: {title:"Mentor Program", hero:"g-mentor", body:`
+    <div class="sheet">
+      <div class="eyebrow">On-ramp</div>
+      <h2>Pair a Newcomer with a Mentor</h2>
+      <p class="lead">The single best retention tool a club has. First-season members get matched with a veteran for outings, bench time, and the loaner-gear handoff.</p>
+      <div class="officer"><div class="av g-a2"></div><div class="ot"><div class="role">Mentor</div><div class="nm">Marie Kowalski</div></div></div>
+      <div class="flow"><span class="chip">paired with</span><span class="arr">&rarr;</span><span class="chip guide">New member &middot; spring '26</span></div>
+      <p class="muted" style="font-size:13.5px;margin-top:14px">Pairings link to the outing RSVP and the loaner-gear log, so a mentor can see at a glance what their newcomer has out and what they've shown up for.</p>
+      <button class="cta" onclick="modal('requestmentor')">Request a mentor</button>
+      <button class="cta ghost" onclick="modal('becomementor')">Volunteer to mentor</button>
+    </div>`},
+
+  raffle: {title:"Raffle", hero:"g-raffle", body:`
+    <div class="sheet">
+      <div class="eyebrow">Winter Banquet &middot; Jan 24</div>
+      <h2>Raffle &amp; Banquet</h2>
+      <p class="lead">The fundraising engine. Bamboo rod, a guided float, a set of fly plates &mdash; bought, tracked, and drawn here, with proceeds tagged straight to the conservation budget.</p>
+      <div class="dues">
+        <div class="big">$5<small> / ticket &middot; 5 for $20</small></div>
+        <div class="stat">87 tickets left &middot; 213 sold</div>
+        <button onclick="modal('buytickets')">Buy raffle tickets</button>
+      </div>
+      <div class="note self">
+        <div class="nh">Fund tag &middot; admin<span class="who">Treasurer</span></div>
+        <div class="nb">All proceeds routed to the conservation line. The draw is logged here, so the winner list and the dollar total close out without a shoebox of stubs.</div>
+      </div>
+      <button class="cta ghost" onclick="modal('banquettix')">Reserve a banquet seat</button>
+    </div>`},
+
+  feed: {title:"Club Feed", hero:"g-feed", body:`
+    <div class="sheet">
+      <div class="eyebrow">Live &middot; replaces Facebook</div>
+      <h2>What's Happening on the Water</h2>
+      <p class="lead">The same posting flow your members already know &mdash; catch reports, hatch calls, lost-and-found &mdash; just inside a home that's yours, where the archive doesn't rot and the algorithm doesn't decide who sees what.</p>
+      <div class="note">
+        <div class="nh">Post<span class="who">Sam W. &middot; 2h</span></div>
+        <div class="nb">Tricos thick on the lower coulee this morning. 6x or go home. Bridge pool was stacked.</div>
+      </div>
+      <div class="note">
+        <div class="nh">Post<span class="who">Lena P. &middot; 5h</span></div>
+        <div class="nb">Reminder: workday signup closes Friday. Bring gloves, we'll have the brush bundles.</div>
+      </div>
+      <button class="cta ghost" onclick="modal('postflow')">How posting works</button>
+    </div>`},
+
+  chat: {title:"Streamside", hero:"g-chat", body:`
+    <div class="sheet">
+      <div class="eyebrow">Real-time room</div>
+      <h2>Streamside (general)</h2>
+      <p class="lead">The fast lane the feed isn't. Live conditions, quick questions, &ldquo;anyone fishing the Kickapoo tomorrow?&rdquo; &mdash; the back-and-forth that doesn't belong in a permanent post.</p>
+      <div class="note"><div class="nh">Hank V. &middot; now<span class="who"></span></div><div class="nb">Water's up a touch after last night. Still fishable, just go heavier.</div></div>
+      <div class="note self"><div class="nh">You &middot; now<span class="who"></span></div><div class="nb">Heading out at 7, anyone want the second seat?</div></div>
+      <p class="muted" style="font-size:13px">Rooms are per-topic. The &ldquo;Ask MIDGE&rdquo; room sits here too &mdash; parked until the club switches it on.</p>
+    </div>`},
+
+  tiealong: {title:"Tie-Along", hero:"g-cab", body:`
+    <div class="sheet">
+      <div class="eyebrow">Threaded lesson</div>
+      <h2>The Coulee Caddis</h2>
+      <p class="lead">A sequential tie where members reply per step with their own attempt. Parent lesson &rarr; ordered steps &rarr; per-step submissions. The exact shape MIDGE will use when it teaches &mdash; so this gets modeled once, carefully, and reused.</p>
+      <div class="note"><div class="nh">Step 1 &middot; Hook &amp; thread<span class="who">7 replies</span></div><div class="nb">Lay a smooth base back to the bend. Post your wrap.</div></div>
+      <div class="note self"><div class="nh">Step 1 &middot; your attempt<span class="who">you</span></div><div class="nb">First base layer &mdash; a little lumpy at the eye, advice welcome.</div></div>
+      <div class="note"><div class="nh">Step 2 &middot; Body dub<span class="who">5 replies</span></div><div class="nb">Sparse hare's ear, taper toward the thorax.</div></div>
+      <button class="cta ghost" onclick="modal('tieshape')">Why this shape matters</button>
+    </div>`},
+
+  guide: {title:"Guide", hero:"g-feed", body:`
+    <div class="sheet">
+      <div class="eyebrow">Auto-built archive</div>
+      <h2>Material Monday &rarr; Guide</h2>
+      <p class="lead">When an admin schedules a recurring post, it doesn't just hit the feed &mdash; it files itself into the matching Guide section. The archive builds itself, append-only, instead of scrolling away forever.</p>
+      <div class="routecard">
+        <div class="rwhat">Scheduled post: &ldquo;Material Monday &mdash; CDC&rdquo;</div>
+        <div class="rwhen">Publishes Mon 8 AM &middot; repeats weekly</div>
+        <div class="flow">
+          <span class="chip">Feed</span><span class="arr">+</span>
+          <span class="chip guide">Guide &rsaquo; Materials &rsaquo; CDC</span>
+        </div>
+      </div>
+      <p class="muted" style="font-size:13.5px">A routing problem that rhymes with the vault's GNAT/LT routing &mdash; a scheduled post carries a guide target and forks to both feed and named guide on publish.</p>
+    </div>`},
+
+  video: {title:"Video", hero:"g-vid", body:`
+    <div class="sheet">
+      <div class="eyebrow">Timestamped</div>
+      <h2>Tippet-to-Fly Knot</h2>
+      <p class="lead">Members drop timestamp markers &mdash; each with a note &mdash; right into the video. The manual, human version of the reasoning layer's highest-value move: sending you to the exact 90 seconds that matter.</p>
+      <div class="scrub"><div class="played"></div><div class="head"></div></div>
+      <div class="bmrow"><div class="ts">0:42</div><div class="bn"><b>Wet the knot first.</b> Dale's reminder &mdash; saves the tippet on the cinch.</div></div>
+      <div class="bmrow"><div class="ts">1:18</div><div class="bn"><b>Five wraps for fluoro,</b> not four. This is the part everyone skips.</div></div>
+      <div class="bmrow"><div class="ts">2:05</div><div class="bn"><b>Trim flush.</b> A tag end is what catches weeds all day.</div></div>
+      <p class="muted" style="font-size:13px;margin-top:14px">Same primitive &mdash; video + timestamp + meaning-at-that-moment. Built once, exposed two ways: manual admin bookmarks here, MIDGE auto technique-tagging later.</p>
+    </div>`},
+
+  cabinet: {title:"Filing Cabinet", hero:"g-cab", body:`
+    <div class="sheet">
+      <div class="eyebrow">Private &middot; just you</div>
+      <h2>Your Bench</h2>
+      <p class="lead">Saved patterns, your home reaches, your own notes. This is where your MIDGE learns you. It never touches the club feed, and no other member &mdash; admin or not &mdash; can see inside it.</p>
+      <div class="note self"><div class="nh">Saved pattern<span class="who">private</span></div><div class="nb">Coulee Caddis #16 &mdash; what actually worked on the lower reach in August.</div></div>
+      <div class="note self"><div class="nh">Home water<span class="who">private</span></div><div class="nb">Timber Coulee, bridge pool. Best at first light, dies by 9.</div></div>
+      <p class="muted" style="font-size:13px">Anti-extraction by design: the cabinet teaches your reasoning layer, it doesn't feed anyone else's.</p>
+    </div>`}
+};
+
+/* ---------- MODALS ---------- */
+const MODALS = {
+  blankslate:{f:"\uD83E\uDDF1",h:"A blank club spine",
+    what:"Every shelf you scrolled is a movable block on an otherwise empty slate. Reorder them, rename them, hide what your club doesn&rsquo;t run, and drop in your own outings, officers and guides.",
+    why:"<b>Why blank:</b> no two clubs run the same way. The card DNA and the snapshot/MIDGE primitives are locked underneath &mdash; the arrangement on top is yours."},
+  join:{f:"\uD83C\uDFA3",h:"Join the club",
+    what:"New members land on a short form &mdash; name, home water, skill level &mdash; and immediately appear on the roster, eligible for outings, dues and a mentor pairing.",
+    why:"<b>One record from minute one.</b> The same entry powers their RSVPs, badge and access, so nothing ever has to be re-keyed."},
+  addshelf:{f:"\uFF0B",h:"Add another shelf",
+    what:"Spin up a new horizontal rail for anything this spine doesn&rsquo;t already have &mdash; a youth program, a committee, a fly-swap, a memorial fund.",
+    why:"<b>It&rsquo;s all the same card.</b> A new shelf inherits the locked DNA, so it looks native the moment you add it."},
+  parkedchat:{f:"\uD83E\uDD16",h:"Ask MIDGE &mdash; parked",
+    what:"A standing chat room where the vault&rsquo;s reasoning layer answers club questions &mdash; hatch calls, pattern picks, what&rsquo;s working on the coulee. It ships switched off.",
+    why:"<b>Off by default on purpose.</b> The community layer is launch-ready before the reasoning layer turns on &mdash; so the room exists, parked, waiting for the switch."},
+  rsvpok:{f:"\u2705",h:"You&rsquo;re going",
+    what:"You&rsquo;re on the roster for the Timber Coulee wade. The coordinator&rsquo;s sign-up sheet updates instantly &mdash; no one has to chase a still-coming text.",
+    why:"<b>This is the heartbeat.</b> RSVP, carpool seats and lunch counts are three separate tallies because they&rsquo;re three separate problems."},
+  rsvpmaybe:{f:"\uD83E\uDD14",h:"Marked maybe",
+    what:"You show as tentative. The coordinator sees a maybe count separately, so seat and food planning stays honest.",
+    why:"<b>Honest counts.</b> A maybe isn&rsquo;t a yes &mdash; the sheet knows the difference."},
+  rsvpno:{f:"\uD83D\uDC4B",h:"Marked out",
+    what:"No problem &mdash; you&rsquo;re off this one. You&rsquo;ll still see the recap and any photos afterward.",
+    why:"<b>Clean roster.</b> Outs are tracked too, so the final headcount is real."},
+  callcoord:{f:"\uD83D\uDCDE",h:"Contact the coordinator",
+    what:"Dale carries the live sign-up sheet and his number is right here &mdash; texts OK. The named-human-with-a-phone is exactly what clubs run on today.",
+    why:"<b>Keep what works.</b> The spine doesn&rsquo;t replace the coordinator &mdash; it gives them a better clipboard."},
+  addtocal:{f:"\uD83D\uDCC5",h:"Add to calendar",
+    what:"Drops the outing, the 6:30 meet time and the put-in into your own calendar.",
+    why:"<b>Calendar that talks to dues and roster.</b> One record, many surfaces."},
+  speaker:{f:"\uD83E\uDEB6",h:"Guest speaker",
+    what:"Ryan Storch &mdash; competition tyer whose patterns are in the vault. The bio, his pattern links and the program topic all sit on the meeting page.",
+    why:"<b>Programs are the draw.</b> Giving the speaker a real profile is how you fill the hall."},
+  minutes:{f:"\uD83D\uDCDD",h:"Meeting minutes",
+    what:"July&rsquo;s minutes, attached to July&rsquo;s meeting. The whole institutional memory of the club, in order, not scrolling away.",
+    why:"<b>An archive that won&rsquo;t rot.</b> This is the club-secretary feature Facebook never had."},
+  rsvpmeeting:{f:"\u2705",h:"See you Tuesday",
+    what:"You&rsquo;re counted for the August meeting and the 6 PM casting clinic.",
+    why:"<b>Clinic + program counted separately</b> so the loaner-rod count is right."},
+  paydues:{f:"\uD83D\uDCB3",h:"Renew dues",
+    what:"Pay $45 (or $65 family) and your roster card, badge and access all update in the same motion.",
+    why:"<b>Payment is the update.</b> No PayPal-link-plus-mailed-check-plus-email-us-if-your-info-changed anymore."},
+  roles:{f:"\uD83D\uDEE1\uFE0F",h:"What each role owns",
+    what:"President runs meetings, Secretary keeps minutes &amp; roster, Treasurer holds dues &amp; the raffle ledger, Conservation chair owns workdays &amp; the stewardship tally, Programs chair books speakers, coordinators run outings.",
+    why:"<b>Clarity = volunteers.</b> When members can see who owns what, they actually step up."},
+  volunteer:{f:"\uD83C\uDF3F",h:"Counted for the workday",
+    what:"You&rsquo;re on the Sep 13 restoration crew. Your hours will log straight into the stewardship tally.",
+    why:"<b>Hours become the grant report.</b> No one retypes a paper sign-in."},
+  monitor:{f:"\uD83C\uDF21\uFE0F",h:"Log a reading",
+    what:"Drop a stream-temp or macro reading from your home reach. It feeds the same waterway data the vault uses for hatch matching.",
+    why:"<b>Members&rsquo; data, members&rsquo; benefit.</b> The monitoring that serves the fish also serves the fishing."},
+  checkout:{f:"\uD83D\uDCDA",h:"Library &amp; loaner gear",
+    what:"Browse books, vises and loaner rods and check one out. The system tracks who has what and when it&rsquo;s due.",
+    why:"<b>Gear comes home.</b> A lending library only works if the 5-weight is tracked."},
+  requestmentor:{f:"\uD83E\uDD1D",h:"Request a mentor",
+    what:"Get paired with a veteran for your first season &mdash; outings, bench time, and the loaner-gear handoff.",
+    why:"<b>The retention tool.</b> Paired newcomers come back; unpaired ones drift."},
+  becomementor:{f:"\uD83E\uDE9D",h:"Volunteer to mentor",
+    what:"Sign up to take a newcomer under your wing. You&rsquo;ll see their RSVPs and loaner gear at a glance.",
+    why:"<b>Veterans carry the culture.</b> The spine just makes the pairing visible."},
+  buytickets:{f:"\uD83C\uDF9F\uFE0F",h:"Buy raffle tickets",
+    what:"$5 each or 5 for $20. Tickets, the running total and the eventual draw all live here, tagged to the conservation fund.",
+    why:"<b>Fundraising engine, no shoebox.</b> The winner list and the dollar total close out clean."},
+  banquettix:{f:"\uD83C\uDF7D\uFE0F",h:"Banquet seat",
+    what:"Reserve a seat and a meal count for Jan 24, tied to whether your dues are current.",
+    why:"<b>Counts that match reality.</b> Meal numbers tie to who&rsquo;s actually paid."},
+  postflow:{f:"\uD83D\uDCE3",h:"How posting works",
+    what:"Same flow your members already know &mdash; write, attach a photo, post. It lands in the club feed, not a stranger&rsquo;s timeline.",
+    why:"<b>Familiar in, yours forever.</b> Keep the muscle memory, lose the algorithm."},
+  tieshape:{f:"\uD83E\uDEA1",h:"Why this shape matters",
+    what:"Parent lesson &rarr; ordered steps &rarr; per-step user submissions. It&rsquo;s the exact structure a guided MIDGE lesson needs.",
+    why:"<b>Build once, right.</b> The community tie-along and the future AI lesson are the same primitive."},
+  explain:{f:"\uD83E\uDDED",h:"About this view",
+    what:"Each detail page explains what the block is for, then shows the layout &mdash; it&rsquo;s a pitch mockup, not production.",
+    why:"<b>Door at every height.</b> A new member and a 30-year officer should both find their footing here."}
+};
+
+/* ---------- helpers ---------- */
+function openDetail(key){
+  const dv = document.getElementById("detail-view");
+  const v = VIEWS[key];
+  if(v){
+    document.getElementById("detail-title").textContent = v.title;
+    document.getElementById("detail-body").innerHTML =
+      '<div class="dhero '+v.hero+'"></div>'+v.body;
+  } else {
+    document.getElementById("detail-title").textContent = "Coming soon";
+    document.getElementById("detail-body").innerHTML =
+      '<div class="dhero g-bank"></div><div class="sheet"><h2>Coming soon</h2><p class="muted">This block is not wired in the prototype yet.</p></div>';
+  }
+  document.getElementById("detail-body").scrollTop = 0;
+  dv.classList.add("open");
+}
+function closeDetail(){ document.getElementById("detail-view").classList.remove("open"); }
+
+function modal(key){
+  if(key==="menu"){ hamburgerMenu(); return; }
+  const m = MODALS[key];
+  const box = document.getElementById("modal-content");
+  if(m){
+    box.innerHTML =
+      '<div class="mf">'+m.f+'</div><h3>'+m.h+'</h3>'+
+      '<div class="what">'+m.what+'</div>'+
+      '<div class="why">'+m.why+'</div>'+
+      '<button class="mclose" onclick="closeModal()">Got it</button>';
+  } else {
+    box.innerHTML = '<h3>&mdash;</h3><div class="what">Coming soon.</div><button class="mclose" onclick="closeModal()">Close</button>';
+  }
+  document.getElementById("modal").classList.add("open");
+}
+function closeModal(){ document.getElementById("modal").classList.remove("open"); }
+
+function hamburgerMenu(){
+  const items = [
+    ["\uD83C\uDFA3","Outings &amp; RSVP","The heartbeat &mdash; sign-up sheets, carpools, lunch counts","openDetail('outing')"],
+    ["\uD83D\uDCCB","Meetings &amp; Programs","Agenda, speaker, minutes, casting clinic","openDetail('meeting')"],
+    ["\uD83D\uDCB3","Membership &amp; Dues","One record &mdash; renew and everything updates","openDetail('dues')"],
+    ["\uD83D\uDEE1\uFE0F","Officers &amp; Roles","Who owns what, with a face and a number","openDetail('officers')"],
+    ["\uD83C\uDF3F","Conservation","Workdays and the stewardship tally","openDetail('conserv')"],
+    ["\uD83D\uDCDA","History &amp; Library","Founders, archive, loaner gear","openDetail('history')"],
+    ["\uD83E\uDD1D","Mentor Program","Pair newcomers with veterans","openDetail('mentor')"],
+    ["\uD83C\uDF9F\uFE0F","Raffles &amp; Fundraising","The banquet engine","openDetail('raffle')"],
+    ["\uD83D\uDCE3","Club Feed","Replaces Facebook","openDetail('feed')"],
+    ["\uD83D\uDCAC","Chat Rooms","Real-time &mdash; incl. parked Ask MIDGE","openDetail('chat')"],
+    ["\uD83D\uDDC4\uFE0F","Your Filing Cabinet","Private &mdash; teaches your MIDGE","openDetail('cabinet')"]
+  ];
+  const box = document.getElementById("modal-content");
+  box.innerHTML = '<h3 style="padding:0 0 6px">Club navigation</h3><div class="menulist">'+
+    items.map(function(i){ return '<div class="mi" onclick="closeModal();'+i[3]+'"><span class="ic">'+i[0]+
+      '</span><div class="mt">'+i[1]+'<div class="ms">'+i[2]+'</div></div><span class="chev">&rsaquo;</span></div>'; }).join("")+
+    '</div><div style="padding:14px 0 0"><button class="mclose" onclick="closeModal()">Close</button></div>';
+  document.getElementById("modal").classList.add("open");
+}
+</script>
+</body>
+</html>
