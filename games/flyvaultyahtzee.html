@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>FlyVault Yahtzee</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  :root{
+    --bg:#0a0a0a; --panel:#141416; --line:rgba(255,255,255,.10);
+    --txt:#f5f5f5; --dim:rgba(255,255,255,.70); --accent:#e8c274;
+    --you:#2e86de; --held:#d8b26a;
+  }
+  html,body{height:100%;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow:hidden;}
+  #app{position:fixed;inset:0;display:flex;flex-direction:column;max-width:600px;margin:0 auto;}
+  header{display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 0 8px;position:relative;}
+  header img{width:26px;height:26px;}
+  header h1{font-size:15px;font-weight:300;letter-spacing:4px;}
+  /* scoreboard */
+  #board{flex:1;overflow-y:auto;padding:0 10px 6px;position:relative;}
+  #boardWatermark{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:60%;max-width:280px;opacity:.05;pointer-events:none;z-index:0;}
+  #tableWrap{position:relative;z-index:1;}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;}
+  th,td{padding:0;text-align:center;}
+  thead th{position:sticky;top:0;background:var(--bg);padding:6px 2px 8px;font-size:11px;
+    letter-spacing:1px;color:#bbb;font-weight:500;z-index:2;}
+  thead th.me{color:var(--you);font-weight:700;background:linear-gradient(var(--bg),rgba(46,134,222,.10));}
+  td.mecol{background:rgba(46,134,222,.06);}
+  .cat{text-align:left;padding:0 6px;font-size:13px;color:#cfcfcf;white-space:nowrap;}
+  .cat b{color:var(--txt);font-weight:600;}
+  tbody tr{border-top:1px solid var(--line);}
+  tbody tr.sub td{border:none;padding-top:4px;}
+  .cell{height:38px;font-size:15px;font-weight:400;position:relative;width:23%;}
+  .cell.mine.avail{padding:2px;}
+  .scoreBtn{
+    -webkit-appearance:none;appearance:none;
+    display:inline-block;min-width:42px;min-height:30px;padding:5px 6px;
+    border-radius:8px;border:1px solid rgba(200,150,60,.6);
+    background:#e8c274;color:#2a2109;font-size:15px;font-weight:700;line-height:1;
+    cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(0,0,0,.15);
+  }
+  .scoreBtn:active{background:#d0a84f;transform:scale(.94);}
+  .scoreBtn.selected{background:var(--you);color:#fff;border-color:#fff;
+    box-shadow:0 0 0 2px var(--you),0 0 10px rgba(46,134,222,.6);}
+  .cell.filled{color:var(--txt);}
+  .cell.zero{color:#888;}
+  .secLabel{font-size:10.5px;letter-spacing:2px;color:#9a9a9a;text-align:left;padding:8px 6px 2px;text-transform:uppercase;}
+  /* dice tray */
+  #tray{background:var(--panel);border-top:1px solid var(--line);padding:14px 12px calc(14px + env(safe-area-inset-bottom));}
+  #turnInfo{text-align:center;font-size:13px;letter-spacing:1px;color:#e8e8e8;height:18px;margin-bottom:10px;}
+  #turnInfo b{color:var(--accent);font-weight:700;}
+  #dice{display:flex;justify-content:center;gap:9px;margin-bottom:14px;}
+  .die{width:56px;height:56px;border-radius:13px;background:#fff;position:relative;cursor:pointer;
+    transition:transform .12s,box-shadow .12s;box-shadow:0 3px 0 rgba(0,0,0,.4);flex:0 0 auto;}
+  .die.held{transform:translateY(4px);box-shadow:0 0 0 3px var(--held),0 1px 0 rgba(0,0,0,.4);}
+  .die.rolling{animation:sh .5s ease;}
+  @keyframes sh{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-8px) rotate(-9deg)}
+    50%{transform:translateY(2px) rotate(7deg)}75%{transform:translateY(-4px) rotate(-4deg)}}
+  .pip{position:absolute;width:9px;height:9px;border-radius:50%;background:#16181c;}
+  .die.held .heldTag{position:absolute;top:-9px;left:50%;transform:translateX(-50%);
+    font-size:8px;letter-spacing:1px;color:var(--held);white-space:nowrap;}
+  #controls{display:flex;gap:10px;align-items:stretch;justify-content:center;}
+  #rollBtn{background:var(--accent);color:#1a1508;border:none;padding:14px 20px;border-radius:40px;
+    font-size:16px;letter-spacing:2px;font-weight:700;cursor:pointer;transition:transform .1s,opacity .2s;
+    flex:1 1 0;max-width:200px;}
+  #rollBtn:active{transform:scale(.96);}
+  #rollBtn:disabled{opacity:.3;cursor:default;}
+  #rollBtn .sub{display:block;font-size:10px;letter-spacing:1px;font-weight:500;opacity:.7;margin-top:1px;}
+  #confirmBtn{background:var(--you);color:#fff;border:none;padding:14px 20px;border-radius:40px;
+    font-size:16px;letter-spacing:2px;font-weight:700;cursor:pointer;transition:transform .1s,background .15s,opacity .2s;
+    flex:1 1 0;max-width:200px;}
+  #confirmBtn:active{transform:scale(.96);}
+  #confirmBtn:disabled{background:#2a2a2e;color:#6a6a6a;cursor:default;}
+  #confirmBtn .sub{display:block;font-size:10px;letter-spacing:1px;font-weight:500;opacity:.8;margin-top:1px;text-transform:none;}
+  .hint{font-size:12px;color:#b8b8b8;text-align:center;margin-top:9px;letter-spacing:.3px;min-height:15px;padding:0 8px;}
+  /* overlay */
+  #ov{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.82);backdrop-filter:blur(4px);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;text-align:center;padding:24px;}
+  #ov.hidden{display:none;}
+  #ov img{width:76px;height:76px;}
+  #ov h2{font-size:clamp(24px,7vw,40px);font-weight:200;letter-spacing:5px;}
+  #ov p{color:#e0e0e0;font-size:14.5px;letter-spacing:.3px;max-width:320px;line-height:1.65;}
+  #ov .final{display:flex;flex-direction:column;gap:6px;margin:4px 0;font-size:14px;}
+  #ov .final div{display:flex;justify-content:space-between;gap:30px;min-width:190px;}
+  #ov .final .win{color:var(--accent);font-weight:600;}
+  #ov button{background:#fff;color:#000;border:none;padding:14px 44px;border-radius:40px;
+    font-size:15px;letter-spacing:3px;font-weight:600;cursor:pointer;}
+  #ov button:active{transform:scale(.96);}
+</style>
+</head>
+<body>
+<div id="app">
+  <header><img id="logoImg" alt=""><h1>FLYVAULT YAHTZEE</h1></header>
+  <div id="board"><img id="boardWatermark" alt=""><div id="tableWrap"></div></div>
+  <div id="tray">
+    <div id="turnInfo"></div>
+    <div id="dice"></div>
+    <div id="controls">
+      <button id="rollBtn">ROLL<span class="sub">rolls left: 3</span></button>
+      <button id="confirmBtn">SCORE<span class="sub">pick a box</span></button>
+    </div>
+    <div class="hint" id="hint">Tap dice to hold them, then roll again.</div>
+  </div>
+</div>
+
+<div id="ov">
+  <img id="ovLogo" alt="">
+  <h2 id="ovTitle">FLYVAULT<br>YAHTZEE</h2>
+  <p id="ovText">You vs. MIDGE, Cass, and Rich.<br><br><b style="color:#e8c274">How to play:</b> Tap ROLL. Tap any dice you want to keep — they lock and glow gold. Roll up to 3 times. When you're happy, tap a glowing box in the YOU column to bank those points. Highest total after 13 rounds wins.</p>
+  <div class="final" id="ovFinal"></div>
+  <button id="ovBtn">PLAY</button>
+</div>
+
+<script>
+const LOGO_PATHS = ["M1543 7786 l-28 -24 60 -17 c33 -9 103 -29 155 -45 52 -15 129 -36 170 -45 434 -101 1782 -609 2039 -769 20 -12 97 -56 171 -96 74 -41 158 -88 185 -106 28 -17 120 -71 205 -119 85 -49 184 -107 220 -130 36 -23 108 -68 160 -100 151 -92 583 -381 725 -485 72 -53 159 -116 195 -140 91 -61 284 -206 300 -225 19 -23 -37 -20 -102 6 -71 27 -685 331 -769 380 -37 21 -143 76 -235 123 -93 46 -222 113 -287 150 -99 55 -300 156 -312 156 -2 0 -46 24 -97 54 -52 30 -139 74 -193 99 -55 25 -151 71 -213 102 -63 31 -137 63 -164 72 -66 19 -237 92 -351 150 -173 86 -610 253 -625 239 -8 -8 151 -103 308 -184 91 -47 206 -109 255 -138 78 -45 736 -374 749 -374 3 0 75 -34 161 -75 85 -41 158 -75 161 -75 6 0 985 -492 1044 -525 14 -8 144 -73 290 -144 285 -141 310 -148 518 -166 90 -8 99 -12 257 -131 93 -70 142 -121 129 -134 -14 -14 -301 77 -634 201 -119 44 -356 124 -470 157 -37 11 -69 16 -74 11 -24 -22 37 -56 506 -282 103 -49 147 -76 145 -86 -1 -11 17 -20 63 -33 94 -26 97 -27 81 -38 -21 -12 -277 -1 -441 20 -80 10 -181 21 -225 25 -126 9 -510 68 -815 125 -331 63 -681 97 -1045 104 -175 3 -425 11 -555 17 -167 7 -305 7 -471 0 -128 -6 -302 -11 -386 -11 -225 0 -753 -36 -1028 -70 -132 -16 -271 -32 -310 -36 -99 -10 -117 -18 -113 -52 l3 -27 180 -3 c99 -1 284 2 410 7 337 14 1138 -18 1168 -48 16 -16 -165 -27 -588 -37 -132 -3 -262 -10 -290 -15 -29 -6 -125 -7 -229 -3 -238 9 -228 -10 24 -46 123 -18 624 -29 1310 -30 355 0 728 -5 830 -10 102 -5 293 -10 425 -10 380 0 703 -12 722 -25 27 -20 -42 -53 -164 -80 -144 -31 -272 -88 -418 -186 -147 -100 -143 -96 -276 -247 -126 -142 -125 -141 -185 -315 -91 -266 -87 -247 -87 -422 -1 -280 66 -460 240 -645 222 -236 490 -336 832 -310 240 19 353 54 493 156 37 27 114 82 170 122 243 173 498 372 498 389 0 11 -130 -18 -203 -46 -16 -6 -78 -11 -139 -11 -135 0 -162 10 -266 105 -72 65 -96 74 -133 55 -34 -19 -17 -69 48 -141 62 -69 158 -106 284 -110 64 -3 68 -11 22 -45 -21 -16 -74 -58 -118 -94 -250 -207 -406 -280 -631 -296 -367 -27 -749 181 -884 480 -130 286 -82 688 113 939 233 300 543 486 984 590 l138 32 285 -1 c238 0 310 -4 435 -22 83 -12 164 -23 180 -24 41 -4 34 -22 -12 -30 -42 -7 -337 -96 -507 -152 -60 -20 -148 -57 -198 -83 -146 -77 -141 -97 12 -42 129 46 543 161 645 180 39 6 111 22 162 35 142 35 401 70 415 56 6 -6 10 -13 7 -15 -26 -18 -253 -117 -279 -123 -62 -12 -122 -35 -265 -101 -140 -66 -338 -173 -332 -180 9 -9 183 33 277 68 58 21 130 45 160 53 30 8 90 27 133 42 58 20 81 24 89 16 7 -7 10 -14 7 -16 -6 -6 -280 -136 -287 -136 -45 0 -763 -318 -737 -327 11 -3 281 83 440 142 55 20 143 51 195 70 173 60 259 94 378 149 64 30 155 64 202 76 47 12 111 28 142 37 79 22 116 4 66 -32 -83 -59 -412 -264 -578 -360 -230 -132 -654 -464 -635 -495 18 -29 52 -9 462 259 73 47 200 129 283 181 141 89 410 266 637 422 248 169 459 248 665 248 141 0 335 74 382 145 17 25 47 38 146 59 36 8 148 33 250 56 238 53 489 94 710 114 96 9 205 21 242 26 37 6 93 10 124 10 40 0 55 3 48 10 -15 15 -508 15 -649 1 -252 -26 -510 -71 -805 -142 -418 -101 -509 -113 -643 -83 -96 22 -194 69 -297 143 -47 33 -112 80 -145 103 -33 23 -112 80 -176 127 -63 48 -177 129 -252 181 -76 52 -194 136 -265 185 -70 50 -219 151 -331 225 -113 74 -327 216 -476 315 -150 99 -319 208 -376 243 -208 125 -277 166 -454 269 -99 58 -184 108 -190 113 -31 25 -416 231 -682 364 -332 166 -421 202 -535 215 -55 7 -123 29 -278 91 -235 94 -292 114 -410 145 -47 12 -143 39 -215 60 -205 58 -344 91 -540 125 -149 27 -187 26 -222 -4z", "M2464 6309 c-66 -4 -163 -15 -214 -24 -140 -24 -138 -30 18 -50 61 -8 152 -21 202 -30 51 -8 149 -22 218 -30 70 -9 179 -28 242 -42 160 -34 193 -40 347 -63 75 -11 193 -36 262 -54 70 -19 177 -44 237 -56 210 -41 252 -50 375 -80 175 -43 347 -41 262 3 -66 34 -361 121 -518 153 -187 38 -329 79 -346 100 -9 11 -2 18 36 35 43 19 62 21 196 17 82 -2 149 0 149 3 0 10 -76 44 -140 63 -134 41 -206 47 -590 52 -206 2 -429 5 -495 7 -66 1 -174 -1 -241 -4z", "M3826 5561 c23 -21 462 -146 764 -217 85 -20 251 -61 369 -90 225 -57 255 -62 249 -41 -18 53 -879 292 -1234 342 -123 17 -162 19 -148 6z"];
+function makeLogoCanvas(color,size){
+  const off=document.createElement("canvas");off.width=off.height=size;
+  const g=off.getContext("2d");const s=size/1024;
+  g.save();g.scale(s,s);g.translate(0,1024);g.scale(0.1,-0.1);g.fillStyle=color;
+  LOGO_PATHS.forEach(d=>g.fill(new Path2D(d)));g.restore();return off;
+}
+(function(){const c=makeLogoCanvas("#ffffff",160);const u=c.toDataURL();
+  document.getElementById("logoImg").src=u;document.getElementById("ovLogo").src=u;
+  document.getElementById("boardWatermark").src=makeLogoCanvas("#ffffff",300).toDataURL();})();
+
+// ---- Players ----
+const PLAYERS=[
+  {name:"YOU",  human:true },
+  {name:"MIDGE",human:false},
+  {name:"CASS", human:false},
+  {name:"RICH", human:false}
+];
+
+// ---- Categories ----
+const CATS=[
+  {key:"ones",  label:"Ones",  sec:"upper"},
+  {key:"twos",  label:"Twos",  sec:"upper"},
+  {key:"threes",label:"Threes",sec:"upper"},
+  {key:"fours", label:"Fours", sec:"upper"},
+  {key:"fives", label:"Fives", sec:"upper"},
+  {key:"sixes", label:"Sixes", sec:"upper"},
+  {key:"3kind", label:"3 of a Kind", sec:"lower"},
+  {key:"4kind", label:"4 of a Kind", sec:"lower"},
+  {key:"fh",    label:"Full House",  sec:"lower"},
+  {key:"sm",    label:"Sm. Straight",sec:"lower"},
+  {key:"lg",    label:"Lg. Straight",sec:"lower"},
+  {key:"yahtzee",label:"Yahtzee",    sec:"lower"},
+  {key:"chance",label:"Chance",      sec:"lower"}
+];
+
+function counts(dice){const c=[0,0,0,0,0,0,0];dice.forEach(d=>c[d]++);return c;}
+function sum(dice){return dice.reduce((a,b)=>a+b,0);}
+
+const SCORERS={
+  ones:d=>counts(d)[1]*1, twos:d=>counts(d)[2]*2, threes:d=>counts(d)[3]*3,
+  fours:d=>counts(d)[4]*4, fives:d=>counts(d)[5]*5, sixes:d=>counts(d)[6]*6,
+  "3kind":d=>counts(d).some(c=>c>=3)?sum(d):0,
+  "4kind":d=>counts(d).some(c=>c>=4)?sum(d):0,
+  fh:d=>{const c=counts(d).filter(x=>x>0).sort();return (c.length===2&&c[0]===2&&c[1]===3)?25:0;},
+  sm:d=>{const s=[...new Set(d)].sort().join("");
+    return ["1234","2345","3456"].some(r=>s.includes(r))?30:0;},
+  lg:d=>{const s=[...new Set(d)].sort().join("");
+    return (s==="12345"||s==="23456")?40:0;},
+  yahtzee:d=>counts(d).some(c=>c===5)?50:0,
+  chance:d=>sum(d)
+};
+
+// ---- State ----
+let scores, turnIdx, catsLeft, current, dice, held, rollsLeft, gameOver;
+const boardEl=document.getElementById("tableWrap");
+const diceEl=document.getElementById("dice");
+const rollBtn=document.getElementById("rollBtn");
+const confirmBtn=document.getElementById("confirmBtn");
+const turnInfo=document.getElementById("turnInfo");
+const hintEl=document.getElementById("hint");
+const ov=document.getElementById("ov");
+confirmBtn.addEventListener("click",confirmTurn);
+
+function newGame(){
+  scores=PLAYERS.map(()=>({}));
+  turnIdx=0; catsLeft=13; gameOver=false;
+  startTurn();
+  buildBoard();
+}
+
+function startTurn(){
+  current=turnIdx;
+  dice=[1,2,3,4,5]; held=[false,false,false,false,false];
+  rollsLeft=3;
+  pendingCat=null;
+  if(PLAYERS[current].human){
+    turnInfo.innerHTML="<b>Your turn</b> — tap ROLL to start";
+    hintEl.textContent="You get 3 rolls. Keep dice by tapping them between rolls.";
+    rollBtn.disabled=false; setRollLabel();
+    renderDice(true);
+  }else{
+    turnInfo.innerHTML="<b>"+PLAYERS[current].name+"</b> is rolling…";
+    hintEl.textContent="Waiting for the other players…";
+    rollBtn.disabled=true;
+    renderDice(false);
+    setTimeout(aiTurn,700);
+  }
+  updateConfirm();
+}
+
+function setRollLabel(){
+  rollBtn.querySelector(".sub").textContent="rolls left: "+rollsLeft;
+  rollBtn.firstChild.textContent = rollsLeft===3 ? "ROLL" : "ROLL";
+}
+
+// ---- Dice rendering ----
+const PIP={
+  1:[[1,1]],2:[[0,0],[2,2]],3:[[0,0],[1,1],[2,2]],
+  4:[[0,0],[0,2],[2,0],[2,2]],5:[[0,0],[0,2],[1,1],[2,0],[2,2]],
+  6:[[0,0],[0,1],[0,2],[2,0],[2,1],[2,2]]
+};
+function renderDice(interactive,rollingSet){
+  diceEl.innerHTML="";
+  dice.forEach((v,i)=>{
+    const d=document.createElement("div");
+    d.className="die"+(held[i]?" held":"")+(rollingSet&&rollingSet[i]?" rolling":"");
+    // pip layout on a 3x3 grid
+    const pad=11, span=(56-pad*2)/2;
+    PIP[v].forEach(([col,row])=>{
+      const p=document.createElement("div");p.className="pip";
+      p.style.left=(pad+col*span-4.5)+"px";
+      p.style.top =(pad+row*span-4.5)+"px";
+      d.appendChild(p);
+    });
+    if(held[i]){const t=document.createElement("div");t.className="heldTag";t.textContent="HELD";d.appendChild(t);}
+    if(interactive && rollsLeft<3){
+      d.addEventListener("click",()=>{held[i]=!held[i];renderDice(true);});
+    }
+    diceEl.appendChild(d);
+  });
+}
+
+// ---- Rolling ----
+function doRoll(){
+  const rolling=dice.map((_,i)=>!held[i]);
+  for(let i=0;i<5;i++) if(!held[i]) dice[i]=1+Math.floor(Math.random()*6);
+  rollsLeft--;
+  renderDice(PLAYERS[current].human,rolling);
+  if(PLAYERS[current].human){
+    setRollLabel();
+    rollBtn.disabled = rollsLeft<=0;
+    hintEl.textContent = rollsLeft>0
+      ? "Tap dice to keep them, roll again, or tap a gold box to pick your score."
+      : "Pick a gold box, then hit the blue button to score and pass the turn.";
+    buildBoard();
+    turnInfo.innerHTML="Pick a <b>gold box</b>, then confirm below";
+    updateConfirm();
+  }
+}
+rollBtn.addEventListener("click",()=>{ if(!PLAYERS[current].human||rollsLeft<=0) return; doRoll(); });
+
+// ---- Scoring / banking ----
+function upperSubtotal(pi){
+  let s=0;["ones","twos","threes","fours","fives","sixes"].forEach(k=>{
+    if(scores[pi][k]!=null) s+=scores[pi][k];});
+  return s;
+}
+function bonus(pi){return upperSubtotal(pi)>=63?35:0;}
+function total(pi){
+  let s=bonus(pi);
+  CATS.forEach(c=>{ if(scores[pi][c.key]!=null) s+=scores[pi][c.key]; });
+  return s;
+}
+
+// Human taps a gold box to SELECT a category (highlights, doesn't commit yet).
+// They then confirm with the big button in the tray. This makes ending the turn
+// an obvious, deliberate action instead of a silent tap up in the scorecard.
+let pendingCat=null;
+function humanBank(catKey){
+  if(!PLAYERS[turnIdx] || !PLAYERS[turnIdx].human) return;
+  if(gameOver || rollsLeft>=3) return;
+  if(scores[current][catKey]!=null) return;
+  pendingCat = (pendingCat===catKey) ? null : catKey; // tap again to deselect
+  buildBoard();
+  updateConfirm();
+}
+window.humanBank=humanBank;
+
+// Confirm the selected category and pass to the next player.
+function confirmTurn(){
+  if(pendingCat==null) return;
+  const cat=pendingCat; pendingCat=null;
+  bankScore(cat);
+}
+window.confirmTurn=confirmTurn;
+
+function updateConfirm(){
+  const isHuman = PLAYERS[turnIdx] && PLAYERS[turnIdx].human && !gameOver;
+  const rolled = rollsLeft<3;
+  // Show the SCORE button throughout the human's turn so it's always visible
+  // next to ROLL; it's just disabled until they've rolled and picked a box.
+  confirmBtn.style.display = isHuman ? "inline-block" : "none";
+  if(isHuman && rolled && pendingCat){
+    const pts = SCORERS[pendingCat](dice);
+    confirmBtn.disabled=false;
+    confirmBtn.innerHTML = "SCORE "+pts+"<span class='sub'>next player ▸</span>";
+  }else{
+    confirmBtn.disabled=true;
+    confirmBtn.innerHTML = "SCORE<span class='sub'>"+(rolled?"pick a box":"roll first")+"</span>";
+  }
+}
+
+// Core banking — used by both the human (via confirmTurn) and the AI.
+function bankScore(catKey){
+  if(scores[current][catKey]!=null) return;
+  scores[current][catKey]=SCORERS[catKey](dice);
+  catsLeft = 13*PLAYERS.length - PLAYERS.reduce((n,_,i)=>n+Object.keys(scores[i]).length,0);
+  nextTurn();
+}
+
+function nextTurn(){
+  const allDone = scores.every(s=>Object.keys(s).length>=13);
+  if(allDone){ endGame(); return; }
+  turnIdx=(turnIdx+1)%PLAYERS.length;
+  buildBoard();
+  startTurn();
+}
+
+// ---- AI ----
+function aiTurn(){
+  // roll up to 3 times with a simple hold heuristic, then pick best open category
+  aiRollStep();
+}
+function aiRollStep(){
+  const rolling=dice.map((_,i)=>!held[i]);
+  for(let i=0;i<5;i++) if(!held[i]) dice[i]=1+Math.floor(Math.random()*6);
+  rollsLeft--;
+  renderDice(false,rolling);
+  const open=CATS.filter(c=>scores[current][c.key]==null).map(c=>c.key);
+  if(rollsLeft>0){
+    held=aiChooseHolds(open);
+    renderDice(false);
+    setTimeout(aiRollStep,750);
+  }else{
+    setTimeout(()=>{
+      const best=aiPickCategory(open);
+      // brief highlight of chosen row happens in buildBoard; just bank
+      bankScore(best);
+    },600);
+  }
+}
+function aiChooseHolds(open){
+  const c=counts(dice);
+  // keep the most frequent value; chase straights loosely
+  let bestVal=0,bestCount=0;
+  for(let v=1;v<=6;v++){ if(c[v]>bestCount){bestCount=c[v];bestVal=v;} }
+  // if we have 4+ toward a straight and no pair advantage, keep uniques
+  const uniq=[...new Set(dice)];
+  if(bestCount<=1 && uniq.length>=4 && (open.includes("sm")||open.includes("lg"))){
+    const seen={};
+    return dice.map(d=>{ if(seen[d]){return false;} seen[d]=1;
+      return d>=2 && d<=5 || (open.includes("lg")); });
+  }
+  if(bestCount>=2) return dice.map(d=>d===bestVal);
+  return [false,false,false,false,false];
+}
+function aiPickCategory(open){
+  // score every open category on current dice, add small strategic weighting
+  let best=open[0],bestVal=-1;
+  open.forEach(k=>{
+    let v=SCORERS[k](dice);
+    // prefer not to waste yahtzee/lg straight on a zero if a cheap dump exists
+    if(v===0){
+      // dumping value: prefer to zero-out the least useful category
+      const dumpPref={yahtzee:0.1,lg:0.2,sm:0.3,fh:0.4,"4kind":0.5,ones:0.6};
+      v = -(dumpPref[k]!=null?dumpPref[k]:1.0);
+    }
+    if(v>bestVal){bestVal=v;best=k;}
+  });
+  return best;
+}
+
+// ---- Board rendering ----
+function buildBoard(){
+  const upperCats=CATS.filter(c=>c.sec==="upper");
+  const lowerCats=CATS.filter(c=>c.sec==="lower");
+  let html="<table><thead><tr><th class='cat'></th>";
+  PLAYERS.forEach((p,i)=>{
+    html+="<th class='"+(p.human?"me":"")+"'>"+p.name+(i===turnIdx&&!gameOver?" ▸":"")+"</th>";
+  });
+  html+="</tr></thead><tbody>";
+
+  html+="<tr class='sub'><td colspan='5' class='secLabel'>Upper</td></tr>";
+  upperCats.forEach(c=>{ html+=row(c); });
+  // upper subtotal + bonus
+  html+="<tr><td class='cat'>Bonus <b>(63+)</b></td>";
+  PLAYERS.forEach((p,i)=>{ html+="<td class='cell "+(bonus(i)?'filled':'zero')+"'>"+(Object.keys(scores[i]).some(k=>['ones','twos','threes','fours','fives','sixes'].includes(k))?(bonus(i)?"+35":upperSubtotal(i)+"/63"):"")+"</td>"; });
+  html+="</tr>";
+
+  html+="<tr class='sub'><td colspan='5' class='secLabel'>Lower</td></tr>";
+  lowerCats.forEach(c=>{ html+=row(c); });
+
+  // totals
+  html+="<tr style='border-top:2px solid rgba(255,255,255,.25)'><td class='cat'><b>Total</b></td>";
+  PLAYERS.forEach((p,i)=>{ html+="<td class='cell filled' style='font-weight:600;color:var(--accent)'>"+total(i)+"</td>"; });
+  html+="</tr>";
+
+  html+="</tbody></table>";
+  boardEl.innerHTML=html;
+}
+function row(c){
+  let h="<tr><td class='cat'>"+c.label+"</td>";
+  PLAYERS.forEach((p,i)=>{
+    const mc = p.human ? " mecol" : "";
+    const filled=scores[i][c.key]!=null;
+    const isMineTurn = i===turnIdx && p.human && !gameOver && rollsLeft<3;
+    if(filled){
+      h+="<td class='cell"+mc+" "+(scores[i][c.key]===0?'zero':'filled')+"'>"+scores[i][c.key]+"</td>";
+    }else if(isMineTurn){
+      const preview=SCORERS[c.key](dice);
+      const sel = pendingCat===c.key ? " selected" : "";
+      h+="<td class='cell mine avail"+mc+"'><button type='button' class='scoreBtn"+sel+"' onclick=\"humanBank('"+c.key+"')\">"+preview+"</button></td>";
+    }else{
+      h+="<td class='cell"+mc+"'></td>";
+    }
+  });
+  return h+"</tr>";
+}
+
+// ---- End ----
+function endGame(){
+  gameOver=true;
+  buildBoard();
+  const totals=PLAYERS.map((p,i)=>({name:p.name,score:total(i),human:p.human}));
+  const max=Math.max(...totals.map(t=>t.score));
+  totals.sort((a,b)=>b.score-a.score);
+  const youWon=totals[0].human;
+  document.getElementById("ovTitle").innerHTML = youWon?"YOU WIN":totals[0].name+" WINS";
+  document.getElementById("ovText").textContent = youWon
+     ? "Top of the leaderboard. Rack 'em again?"
+     : totals[0].name+" edged it out. Rematch?";
+  let f="";
+  totals.forEach(t=>{ f+="<div class='"+(t.score===max?'win':'')+"'><span>"+t.name+"</span><span>"+t.score+"</span></div>"; });
+  document.getElementById("ovFinal").innerHTML=f;
+  document.getElementById("ovBtn").textContent="PLAY AGAIN";
+  ov.classList.remove("hidden");
+}
+
+document.getElementById("ovBtn").addEventListener("click",()=>{
+  ov.classList.add("hidden");
+  newGame();
+});
+
+// boot
+newGame();
+</script>
+</body>
+</html>

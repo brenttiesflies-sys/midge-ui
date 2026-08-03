@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>FlyVault Air Hockey</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; background:#000; overflow:hidden; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+  #wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
+  canvas { display:block; touch-action:none; background:#0a0a0a; box-shadow:0 0 60px rgba(255,255,255,0.06); border-radius:14px; }
+  #hud {
+    position:fixed; top:0; left:0; right:0; display:flex; justify-content:center; gap:60px;
+    padding:14px; pointer-events:none; z-index:5;
+    font-variant-numeric:tabular-nums; letter-spacing:2px;
+  }
+  .score { color:#fff; font-size:clamp(28px,7vw,44px); font-weight:200; opacity:.9; }
+  .score span { display:block; font-size:11px; letter-spacing:3px; opacity:.4; text-align:center; margin-top:2px; font-weight:400; }
+  #resetBtn {
+    position:fixed; top:12px; right:12px; z-index:6; pointer-events:auto;
+    background:rgba(255,255,255,.10); color:#fff; border:1px solid rgba(255,255,255,.25);
+    padding:9px 16px; border-radius:30px; font-size:12px; letter-spacing:2px; font-weight:600;
+    cursor:pointer; transition:background .15s,transform .1s; backdrop-filter:blur(4px);
+  }
+  #resetBtn:active { transform:scale(.94); background:rgba(255,255,255,.2); }
+  #resetBtn.hidden { display:none; }
+  #msg {
+    position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    z-index:10; color:#fff; text-align:center; gap:20px; background:rgba(0,0,0,.72); backdrop-filter:blur(3px);
+  }
+  #msg.hidden { display:none; }
+  #msg h1 { font-size:clamp(28px,8vw,54px); font-weight:200; letter-spacing:6px; }
+  #msg p { opacity:.55; font-size:15px; letter-spacing:1px; max-width:300px; line-height:1.5; }
+  .diffRow { display:flex; gap:14px; margin-top:4px; }
+  .diffBtn {
+    pointer-events:auto; background:transparent; color:#fff; border:1px solid rgba(255,255,255,.3);
+    padding:12px 26px; border-radius:40px; font-size:14px; letter-spacing:3px; font-weight:500; cursor:pointer;
+    transition:all .15s;
+  }
+  .diffBtn.sel { background:#fff; color:#000; border-color:#fff; }
+  .diffBtn:active { transform:scale(.95); }
+  #startBtn {
+    pointer-events:auto; background:#fff; color:#000; border:none; padding:15px 46px; border-radius:40px;
+    font-size:16px; letter-spacing:3px; font-weight:600; cursor:pointer; transition:transform .12s; margin-top:6px;
+  }
+  #startBtn:active { transform:scale(.95); }
+  .logo-mark { width:88px; height:88px; }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c"></canvas></div>
+
+<div id="hud">
+  <div class="score" id="sTop">0<span>MIDGE</span></div>
+  <div class="score" id="sBot">0<span>YOU</span></div>
+</div>
+<button id="resetBtn" aria-label="Reset puck">↺ RESET</button>
+
+<div id="msg">
+  <img class="logo-mark" id="logoImg" alt="FlyVault">
+  <h1 id="title">FLYVAULT<br>AIR HOCKEY</h1>
+  <p id="sub">Drag your paddle with your finger. First to 7 wins.</p>
+  <div class="diffRow" id="diffRow">
+    <button class="diffBtn sel" data-diff="easy">EASY</button>
+    <button class="diffBtn" data-diff="hard">HARD</button>
+  </div>
+  <button id="startBtn">PLAY</button>
+</div>
+
+<script>
+const LOGO_PATHS = ["M1543 7786 l-28 -24 60 -17 c33 -9 103 -29 155 -45 52 -15 129 -36 170 -45 434 -101 1782 -609 2039 -769 20 -12 97 -56 171 -96 74 -41 158 -88 185 -106 28 -17 120 -71 205 -119 85 -49 184 -107 220 -130 36 -23 108 -68 160 -100 151 -92 583 -381 725 -485 72 -53 159 -116 195 -140 91 -61 284 -206 300 -225 19 -23 -37 -20 -102 6 -71 27 -685 331 -769 380 -37 21 -143 76 -235 123 -93 46 -222 113 -287 150 -99 55 -300 156 -312 156 -2 0 -46 24 -97 54 -52 30 -139 74 -193 99 -55 25 -151 71 -213 102 -63 31 -137 63 -164 72 -66 19 -237 92 -351 150 -173 86 -610 253 -625 239 -8 -8 151 -103 308 -184 91 -47 206 -109 255 -138 78 -45 736 -374 749 -374 3 0 75 -34 161 -75 85 -41 158 -75 161 -75 6 0 985 -492 1044 -525 14 -8 144 -73 290 -144 285 -141 310 -148 518 -166 90 -8 99 -12 257 -131 93 -70 142 -121 129 -134 -14 -14 -301 77 -634 201 -119 44 -356 124 -470 157 -37 11 -69 16 -74 11 -24 -22 37 -56 506 -282 103 -49 147 -76 145 -86 -1 -11 17 -20 63 -33 94 -26 97 -27 81 -38 -21 -12 -277 -1 -441 20 -80 10 -181 21 -225 25 -126 9 -510 68 -815 125 -331 63 -681 97 -1045 104 -175 3 -425 11 -555 17 -167 7 -305 7 -471 0 -128 -6 -302 -11 -386 -11 -225 0 -753 -36 -1028 -70 -132 -16 -271 -32 -310 -36 -99 -10 -117 -18 -113 -52 l3 -27 180 -3 c99 -1 284 2 410 7 337 14 1138 -18 1168 -48 16 -16 -165 -27 -588 -37 -132 -3 -262 -10 -290 -15 -29 -6 -125 -7 -229 -3 -238 9 -228 -10 24 -46 123 -18 624 -29 1310 -30 355 0 728 -5 830 -10 102 -5 293 -10 425 -10 380 0 703 -12 722 -25 27 -20 -42 -53 -164 -80 -144 -31 -272 -88 -418 -186 -147 -100 -143 -96 -276 -247 -126 -142 -125 -141 -185 -315 -91 -266 -87 -247 -87 -422 -1 -280 66 -460 240 -645 222 -236 490 -336 832 -310 240 19 353 54 493 156 37 27 114 82 170 122 243 173 498 372 498 389 0 11 -130 -18 -203 -46 -16 -6 -78 -11 -139 -11 -135 0 -162 10 -266 105 -72 65 -96 74 -133 55 -34 -19 -17 -69 48 -141 62 -69 158 -106 284 -110 64 -3 68 -11 22 -45 -21 -16 -74 -58 -118 -94 -250 -207 -406 -280 -631 -296 -367 -27 -749 181 -884 480 -130 286 -82 688 113 939 233 300 543 486 984 590 l138 32 285 -1 c238 0 310 -4 435 -22 83 -12 164 -23 180 -24 41 -4 34 -22 -12 -30 -42 -7 -337 -96 -507 -152 -60 -20 -148 -57 -198 -83 -146 -77 -141 -97 12 -42 129 46 543 161 645 180 39 6 111 22 162 35 142 35 401 70 415 56 6 -6 10 -13 7 -15 -26 -18 -253 -117 -279 -123 -62 -12 -122 -35 -265 -101 -140 -66 -338 -173 -332 -180 9 -9 183 33 277 68 58 21 130 45 160 53 30 8 90 27 133 42 58 20 81 24 89 16 7 -7 10 -14 7 -16 -6 -6 -280 -136 -287 -136 -45 0 -763 -318 -737 -327 11 -3 281 83 440 142 55 20 143 51 195 70 173 60 259 94 378 149 64 30 155 64 202 76 47 12 111 28 142 37 79 22 116 4 66 -32 -83 -59 -412 -264 -578 -360 -230 -132 -654 -464 -635 -495 18 -29 52 -9 462 259 73 47 200 129 283 181 141 89 410 266 637 422 248 169 459 248 665 248 141 0 335 74 382 145 17 25 47 38 146 59 36 8 148 33 250 56 238 53 489 94 710 114 96 9 205 21 242 26 37 6 93 10 124 10 40 0 55 3 48 10 -15 15 -508 15 -649 1 -252 -26 -510 -71 -805 -142 -418 -101 -509 -113 -643 -83 -96 22 -194 69 -297 143 -47 33 -112 80 -145 103 -33 23 -112 80 -176 127 -63 48 -177 129 -252 181 -76 52 -194 136 -265 185 -70 50 -219 151 -331 225 -113 74 -327 216 -476 315 -150 99 -319 208 -376 243 -208 125 -277 166 -454 269 -99 58 -184 108 -190 113 -31 25 -416 231 -682 364 -332 166 -421 202 -535 215 -55 7 -123 29 -278 91 -235 94 -292 114 -410 145 -47 12 -143 39 -215 60 -205 58 -344 91 -540 125 -149 27 -187 26 -222 -4z", "M2464 6309 c-66 -4 -163 -15 -214 -24 -140 -24 -138 -30 18 -50 61 -8 152 -21 202 -30 51 -8 149 -22 218 -30 70 -9 179 -28 242 -42 160 -34 193 -40 347 -63 75 -11 193 -36 262 -54 70 -19 177 -44 237 -56 210 -41 252 -50 375 -80 175 -43 347 -41 262 3 -66 34 -361 121 -518 153 -187 38 -329 79 -346 100 -9 11 -2 18 36 35 43 19 62 21 196 17 82 -2 149 0 149 3 0 10 -76 44 -140 63 -134 41 -206 47 -590 52 -206 2 -429 5 -495 7 -66 1 -174 -1 -241 -4z", "M3826 5561 c23 -21 462 -146 764 -217 85 -20 251 -61 369 -90 225 -57 255 -62 249 -41 -18 53 -879 292 -1234 342 -123 17 -162 19 -148 6z"];
+
+// ---- Rasterize the real FlyVault logo to offscreen canvases (dark + white) ----
+// potrace paths use transform: translate(0,1024) scale(0.1,-0.1)
+function makeLogoCanvas(color, size){
+  const off=document.createElement("canvas");
+  off.width=off.height=size;
+  const g=off.getContext("2d");
+  const s=size/1024;
+  g.save();
+  g.scale(s,s);
+  g.translate(0,1024);
+  g.scale(0.1,-0.1);
+  g.fillStyle=color;
+  LOGO_PATHS.forEach(d=>{ g.fill(new Path2D(d)); });
+  g.restore();
+  return off;
+}
+
+// Build the menu logo image (white on transparent)
+(function(){
+  const c=makeLogoCanvas("#ffffff",256);
+  document.getElementById("logoImg").src=c.toDataURL();
+})();
+
+// ---- Game setup ----
+const canvas=document.getElementById("c");
+const ctx=canvas.getContext("2d");
+const msg=document.getElementById("msg");
+const startBtn=document.getElementById("startBtn");
+const sTopEl=document.getElementById("sTop");
+const sBotEl=document.getElementById("sBot");
+const titleEl=document.getElementById("title");
+const subEl=document.getElementById("sub");
+const diffRow=document.getElementById("diffRow");
+
+let W,H,DPR,logoDark,logoWhite;
+const WIN_SCORE=7;
+
+// difficulty presets.
+//  maxSpd  = how fast the AI paddle can move (fast shots can beat it)
+//  ease    = how smoothly it moves toward its target (lower = laggier, no shakes)
+//  predict = how far ahead it reads the puck (lower = worse anticipation)
+//  reactDelay = frames it waits after puck heads at it before reacting
+//  aimError   = how far off its aim can be, in paddle-radii (creates open lanes)
+//  activeLine = how far down its own half it will chase (higher = leaves net open)
+const DIFF={
+  easy:{ maxSpd:0.022, ease:0.08, predict:2.0, reactDelay:10, aimError:0.9, activeLine:0.34 },
+  hard:{ maxSpd:0.030, ease:0.11, predict:3.2, reactDelay:5,  aimError:0.5, activeLine:0.42 }
+};
+let diff="easy";
+
+const state={
+  running:false,
+  puck:{x:0,y:0,vx:0,vy:0,r:34,spin:0},
+  pTop:{x:0,y:0,r:46},
+  pBot:{x:0,y:0,r:46},
+  scoreTop:0, scoreBot:0,
+  goalW:0
+};
+
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1, 2.5);
+  const maxW=Math.min(window.innerWidth, 560);
+  const maxH=window.innerHeight;
+  let w=maxW, h=Math.min(maxH, w*1.75);
+  if(h>maxH){ h=maxH; w=h/1.75; }
+  W=Math.floor(w); H=Math.floor(h);
+  canvas.style.width=W+"px"; canvas.style.height=H+"px";
+  canvas.width=Math.floor(W*DPR); canvas.height=Math.floor(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+
+  state.goalW=W*0.42;
+  state.puck.r=Math.max(24, W*0.062);
+  state.pTop.r=state.pBot.r=Math.max(34, W*0.086);
+
+  logoDark=makeLogoCanvas("rgba(18,18,20,0.92)", 512);
+  logoWhite=makeLogoCanvas("#ffffff", 512);
+
+  if(!state.running) placeAll();
+  draw();
+}
+
+function placeAll(){
+  state.puck.x=W/2; state.puck.y=H/2; state.puck.vx=0; state.puck.vy=0; state.puck.spin=0;
+  state.pTop.x=W/2; state.pTop.y=H*0.12;
+  state.pBot.x=W/2; state.pBot.y=H*0.88;
+}
+
+function serve(dir){
+  state.puck.x=W/2; state.puck.y=H/2;
+  const sp=W*0.010;
+  const ang=(Math.random()*0.7-0.35);
+  state.puck.vx=Math.sin(ang)*sp;
+  state.puck.vy=dir*Math.cos(ang)*sp;
+  state.puck.spin=0;
+}
+
+function pointerMove(clientX, clientY){
+  const rect=canvas.getBoundingClientRect();
+  let x=clientX-rect.left, y=clientY-rect.top;
+  const r=state.pBot.r;
+  x=Math.max(r, Math.min(W-r, x));
+  y=Math.max(H/2+r*0.2, Math.min(H-r, y));
+  state.pBot.x=x; state.pBot.y=y;
+}
+canvas.addEventListener("touchmove",e=>{e.preventDefault();const t=e.touches[0];pointerMove(t.clientX,t.clientY);},{passive:false});
+canvas.addEventListener("touchstart",e=>{e.preventDefault();const t=e.touches[0];pointerMove(t.clientX,t.clientY);},{passive:false});
+let mouseDown=false;
+canvas.addEventListener("mousedown",e=>{mouseDown=true;pointerMove(e.clientX,e.clientY);});
+window.addEventListener("mousemove",e=>{if(mouseDown)pointerMove(e.clientX,e.clientY);});
+window.addEventListener("mouseup",()=>mouseDown=false);
+
+let prevPBot={x:0,y:0}, prevTop={x:0,y:0};
+
+// AI target is chosen occasionally and held steady between updates (kills the shakes),
+// with a reaction-delay counter and a persistent aim offset that opens a scoring lane.
+let ai={ tx:0, ty:0, delay:0, aimOff:0, recalc:0 };
+
+function updateAI(){
+  const p=state.pTop, puck=state.puck, d=DIFF[diff];
+  const puckSpeed=Math.hypot(puck.vx,puck.vy);
+  // Chase if the puck is heading toward the AI, OR if it's loitering slowly on
+  // the AI's half (so a stalled/centered puck gets knocked back into play).
+  const puckIncoming = (puck.vy<0 && puck.y<H*0.60) ||
+                       (puckSpeed<W*0.006 && puck.y<H*0.52);
+
+  // React only after a short delay once the puck turns toward the AI.
+  if(puckIncoming){
+    if(ai.delay>0) ai.delay--;
+  } else {
+    ai.delay=d.reactDelay; // reset the delay while puck is going away
+  }
+
+  // Recompute the held target a few times a second, not every frame -> smooth, no tremble.
+  ai.recalc--;
+  if(ai.recalc<=0){
+    ai.recalc = 8; // frames between target changes
+    // pick a fresh aim offset so the AI consistently leaves ONE side open this beat
+    ai.aimOff = (Math.random()*2-1) * d.aimError * p.r;
+
+    if(puckIncoming && ai.delay<=0){
+      // move to intercept, but with limited look-ahead and a deliberate aim error
+      ai.tx = puck.x + puck.vx*d.predict + ai.aimOff;
+      ai.ty = Math.min(H*0.34, puck.y - puck.r);
+    } else {
+      // return toward home; only partially cover the goal so a lane stays open
+      ai.tx = W/2 + (puck.x-W/2)*0.30 + ai.aimOff;
+      ai.ty = H*0.12;
+    }
+    // how far down it's willing to chase — but if the puck is stalled on the AI's
+    // half, let it push all the way to the puck to knock it loose.
+    const puckStalledOnTop = puckSpeed<W*0.006 && puck.y<H*0.50;
+    const chaseLine = puckStalledOnTop ? 0.48 : d.activeLine;
+    ai.ty = Math.min(ai.ty, H*chaseLine);
+    if(puckStalledOnTop){ ai.tx=puck.x; ai.ty=Math.min(puck.y, H*0.48); }
+  }
+
+  // Ease toward the held target with a capped max speed (fast pucks can outrun it).
+  const maxSpd=W*d.maxSpd;
+  let dx=(ai.tx-p.x)*d.ease, dy=(ai.ty-p.y)*d.ease;
+  const mv=Math.hypot(dx,dy);
+  if(mv>maxSpd){ dx*=maxSpd/mv; dy*=maxSpd/mv; }
+  p.x+=dx; p.y+=dy;
+
+  const r=p.r;
+  p.x=Math.max(r,Math.min(W-r,p.x));
+  p.y=Math.max(r,Math.min(H/2-r*0.2,p.y));
+}
+
+function collidePaddle(pad, padPrev){
+  const puck=state.puck;
+  const dx=puck.x-pad.x, dy=puck.y-pad.y;
+  const dist=Math.hypot(dx,dy);
+  const minD=puck.r+pad.r;
+  if(dist<minD && dist>0){
+    const nx=dx/dist, ny=dy/dist;
+    puck.x=pad.x+nx*minD; puck.y=pad.y+ny*minD;
+    const pvx=pad.x-padPrev.x, pvy=pad.y-padPrev.y;
+    const relVx=puck.vx-pvx, relVy=puck.vy-pvy;
+    const dot=relVx*nx+relVy*ny;
+    puck.vx = puck.vx - 2*dot*nx + pvx*0.55;
+    puck.vy = puck.vy - 2*dot*ny + pvy*0.55;
+    const sp=Math.hypot(puck.vx,puck.vy);
+    const minSp=W*0.009;
+    if(sp<minSp){ puck.vx=nx*minSp; puck.vy=ny*minSp; }
+    const maxSp=W*0.028;
+    if(sp>maxSp){ puck.vx*=maxSp/sp; puck.vy*=maxSp/sp; }
+    puck.spin += pvx*0.02;
+  }
+}
+
+function step(){
+  const puck=state.puck;
+  puck.x+=puck.vx; puck.y+=puck.vy;
+  puck.vx*=0.9965; puck.vy*=0.9965;
+  puck.spin*=0.94;
+
+  if(puck.x-puck.r<0){ puck.x=puck.r; puck.vx*=-0.96; }
+  if(puck.x+puck.r>W){ puck.x=W-puck.r; puck.vx*=-0.96; }
+
+  const gL=(W-state.goalW)/2, gR=(W+state.goalW)/2;
+  if(puck.y-puck.r<0){
+    if(puck.x>gL && puck.x<gR){ score("bot"); return; }
+    puck.y=puck.r; puck.vy*=-0.96;
+  }
+  if(puck.y+puck.r>H){
+    if(puck.x>gL && puck.x<gR){ score("top"); return; }
+    puck.y=H-puck.r; puck.vy*=-0.96;
+  }
+  collidePaddle(state.pTop, prevTop);
+  collidePaddle(state.pBot, prevPBot);
+  prevTop.x=state.pTop.x; prevTop.y=state.pTop.y;
+  prevPBot.x=state.pBot.x; prevPBot.y=state.pBot.y;
+}
+
+function score(who){
+  if(who==="bot"){ state.scoreBot++; sBotEl.firstChild.textContent=state.scoreBot; }
+  else { state.scoreTop++; sTopEl.firstChild.textContent=state.scoreTop; }
+  if(state.scoreTop>=WIN_SCORE || state.scoreBot>=WIN_SCORE){ endGame(who); return; }
+  placeAll();
+  state.running=false;
+  setTimeout(()=>{ if(!msg.classList.contains("_end")){ state.running=true; serve(who==="bot"?-1:1); } },650);
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle="#0a0a0a"; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle="rgba(255,255,255,0.12)"; ctx.lineWidth=2;
+  roundRect(2,2,W-4,H-4,12); ctx.stroke();
+  ctx.strokeStyle="rgba(255,255,255,0.10)"; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(14,H/2); ctx.lineTo(W-14,H/2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(W/2,H/2,W*0.16,0,Math.PI*2); ctx.stroke();
+
+  const gL=(W-state.goalW)/2, gR=(W+state.goalW)/2;
+  ctx.strokeStyle="rgba(255,255,255,0.35)"; ctx.lineWidth=5;
+  ctx.beginPath(); ctx.moveTo(gL,3); ctx.lineTo(gR,3); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(gL,H-3); ctx.lineTo(gR,H-3); ctx.stroke();
+
+  const lw=W*0.52;
+  ctx.globalAlpha=0.15;
+  ctx.drawImage(logoWhite, W/2-lw/2, H/2-lw/2, lw, lw);
+  ctx.globalAlpha=1;
+
+  drawPaddle(state.pTop, "#c0392b");
+  drawPaddle(state.pBot, "#2e86de");
+  drawPuck();
+}
+
+function drawPuck(){
+  const p=state.puck;
+  ctx.save();
+  ctx.translate(p.x,p.y);
+  ctx.rotate(p.spin);
+  ctx.beginPath(); ctx.arc(0,3,p.r,0,Math.PI*2);
+  ctx.fillStyle="rgba(0,0,0,0.5)"; ctx.fill();
+  ctx.beginPath(); ctx.arc(0,0,p.r,0,Math.PI*2);
+  const g=ctx.createRadialGradient(-p.r*0.3,-p.r*0.3,p.r*0.2,0,0,p.r);
+  g.addColorStop(0,"#ffffff"); g.addColorStop(1,"#dcdcdc");
+  ctx.fillStyle=g; ctx.fill();
+  ctx.lineWidth=2; ctx.strokeStyle="rgba(0,0,0,0.15)"; ctx.stroke();
+  const s=p.r*1.8;
+  ctx.drawImage(logoDark, -s/2, -s/2, s, s);
+  ctx.restore();
+}
+
+function drawPaddle(pad,color){
+  ctx.save();
+  ctx.translate(pad.x,pad.y);
+  ctx.beginPath(); ctx.arc(0,3,pad.r,0,Math.PI*2);
+  ctx.fillStyle="rgba(0,0,0,0.5)"; ctx.fill();
+  ctx.beginPath(); ctx.arc(0,0,pad.r,0,Math.PI*2);
+  const g=ctx.createRadialGradient(-pad.r*0.3,-pad.r*0.3,pad.r*0.2,0,0,pad.r);
+  g.addColorStop(0,color); g.addColorStop(1,shade(color,-40));
+  ctx.fillStyle=g; ctx.fill();
+  ctx.beginPath(); ctx.arc(0,0,pad.r*0.5,0,Math.PI*2);
+  ctx.fillStyle="rgba(0,0,0,0.25)"; ctx.fill();
+  ctx.beginPath(); ctx.arc(0,0,pad.r*0.5,0,Math.PI*2);
+  ctx.lineWidth=2; ctx.strokeStyle="rgba(255,255,255,0.25)"; ctx.stroke();
+  ctx.restore();
+}
+
+function shade(hex,amt){
+  const n=parseInt(hex.slice(1),16);
+  let r=(n>>16)+amt, g=((n>>8)&255)+amt, b=(n&255)+amt;
+  r=Math.max(0,Math.min(255,r)); g=Math.max(0,Math.min(255,g)); b=Math.max(0,Math.min(255,b));
+  return "#"+((r<<16)|(g<<8)|b).toString(16).padStart(6,"0");
+}
+
+function roundRect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+// Re-center the puck and serve it toward whoever is behind (or random if tied),
+// so play always restarts cleanly. Used by the Reset button and the auto-nudge.
+function resetPuck(){
+  if(!state.running) return;
+  state.puck.x=W/2; state.puck.y=H/2;
+  state.puck.vx=0; state.puck.vy=0; state.puck.spin=0;
+  // serve toward the player who is losing (gives them a fair restart); tie = random
+  let dir;
+  if(state.scoreBot>state.scoreTop) dir=-1;      // you're ahead -> serve up to MIDGE
+  else if(state.scoreTop>state.scoreBot) dir=1;  // MIDGE ahead -> serve down to you
+  else dir=Math.random()<0.5?1:-1;
+  serve(dir);
+  stallFrames=0;
+}
+
+let stallFrames=0;
+function checkStall(){
+  const puck=state.puck;
+  const speed=Math.hypot(puck.vx,puck.vy);
+  // if the puck is crawling and no paddle is right on it, count toward a stall
+  const nearTop=Math.hypot(puck.x-state.pTop.x,puck.y-state.pTop.y)<state.pTop.r+puck.r+4;
+  const nearBot=Math.hypot(puck.x-state.pBot.x,puck.y-state.pBot.y)<state.pBot.r+puck.r+4;
+  if(speed < W*0.004 && !nearTop && !nearBot){ stallFrames++; }
+  else { stallFrames=0; }
+  // ~1.3s of near-stillness with nobody on it -> auto re-serve
+  if(stallFrames>80){ resetPuck(); }
+}
+
+function loop(){
+  if(state.running){ updateAI(); step(); checkStall(); }
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// difficulty selection
+diffRow.addEventListener("click",e=>{
+  const b=e.target.closest(".diffBtn"); if(!b) return;
+  diff=b.dataset.diff;
+  [...diffRow.children].forEach(c=>c.classList.toggle("sel", c===b));
+});
+
+function startGame(){
+  state.scoreTop=0; state.scoreBot=0;
+  sTopEl.firstChild.textContent="0"; sBotEl.firstChild.textContent="0";
+  msg.classList.add("hidden"); msg.classList.remove("_end");
+  resetBtn.classList.remove("hidden");
+  placeAll();
+  state.running=true;
+  serve(Math.random()<0.5?1:-1);
+}
+
+function endGame(who){
+  state.running=false;
+  resetBtn.classList.add("hidden");
+  msg.classList.remove("hidden"); msg.classList.add("_end");
+  const won = who==="bot";
+  titleEl.innerHTML = won ? "YOU WIN" : "MIDGE WINS";
+  subEl.textContent = won ? "Nicely fished. Rack em again?" : "MIDGE took that one. Rematch?";
+  startBtn.textContent = "PLAY AGAIN";
+  diffRow.style.display="flex";
+}
+
+const resetBtn=document.getElementById("resetBtn");
+resetBtn.addEventListener("click",resetPuck);
+resetBtn.classList.add("hidden"); // hidden until a game starts
+
+startBtn.addEventListener("click",startGame);
+window.addEventListener("resize",resize);
+resize();
+loop();
+</script>
+</body>
+</html>
